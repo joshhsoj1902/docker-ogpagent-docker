@@ -1,0 +1,9 @@
+%Cfg::Config = (
+        logfile => '{{if (getenv "OGP_LOGFILE")}}{{.Env.OGP_LOGFILE}}{{else}}/opt/OGP/ogp_agent.log{{end}}',
+        listen_port  => '{{if (getenv "OGP_LISTEN_PORT")}}{{.Env.OGP_LISTEN_PORT}}{{else}}12679{{end}}',
+        listen_ip => '{{if (getenv "OGP_LISTEN_IP")}}{{.Env.OGP_LISTEN_IP}}{{else}}0.0.0.0{{end}}',
+        version => '{{if (getenv "OGP_VERSION")}}{{.Env.OGP_VERSION}}{{else}}v3372{{end}}',
+        key => '{{if (getenv "OGP_KEY")}}{{.Env.OGP_KEY}}{{else}}encryption_key{{end}}',
+        steam_license => '{{if (getenv "OGP_STEAM_LICENSE")}}{{.Env.OGP_STEAM_LICENSE}}{{else}}Accept{{end}}',
+        sudo_password => '{{if (getenv "OGP_SUDO_PASSWORD")}}{{.Env.OGP_SUDO_PASSWORD}}{{else}}ogpuser{{end}}',
+        );

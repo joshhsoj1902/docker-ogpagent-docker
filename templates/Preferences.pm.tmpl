@@ -1,0 +1,7 @@
+%Cfg::Preferences = (
+        screen_log_local => '{{if (getenv "OGP_SCREEN_LOG_LOCAL")}}{{.Env.OGP_SCREEN_LOG_LOCAL}}{{else}}1{{end}}',
+        delete_logs_after => '{{if (getenv "OGP_DELETE_LOGS_AFTER")}}{{.Env.OGP_DELETE_LOGS_AFTER}}{{else}}30{{end}}',
+        ogp_manages_ftp => '{{if (getenv "OGP_OGP_MANAGES_FTP")}}{{.Env.OGP_OGP_MANAGES_FTP}}{{else}}1{{end}}',
+        ftp_method => '{{if (getenv "OGP_FTP_METHOD")}}{{.Env.OGP_FTP_METHOD}}{{else}}PureFTPd{{end}}',
+        ogp_autorestart_server => '{{if (getenv "OGP_AUTORESTART_SERVER")}}{{.Env.OGP_AUTORESTART_SERVER}}{{else}}1{{end}}',
+);
