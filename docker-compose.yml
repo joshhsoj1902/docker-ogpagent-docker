@@ -9,8 +9,10 @@ services:
     #   - "27015:27015/udp"
     # volumes:
     #   - ./ogp_agent/games:/home/ogp_agent/OGP_User_Files
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
     environment:
-      - OGP_LOGFILE="/opt/OGP/ogp_agent.log"
+      - OGP_LOGFILE=/opt/OGP/ogp_agent.log
       - OGP_LISTEN_PORT=12679
       - OGP_LISTEN_IP=0.0.0.0
       - OGP_VERSION=v3372
