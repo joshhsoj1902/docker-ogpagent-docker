@@ -10,3 +10,17 @@ COPY templates /opt/OGP/templates
 
 RUN curl -sSLf -z /usr/local/bin/gomplate -o /usr/local/bin/gomplate https://github.com/hairyhenderson/gomplate/releases/download/v2.0.0/gomplate_linux-amd64-slim \
   && chmod 755 /usr/local/bin/gomplate
+
+RUN apt-get update \
+ && apt-get install -y software-properties-common \
+                       python-software-properties \ 
+                       apt-transport-https \
+                       ca-certificates \
+                       curl \
+                       software-properties-common
+
+RUN curl -fsSL https://download.docker.com/linux/ubuntu/gpg | apt-key add - \
+ && add-apt-repository "deb [arch=amd64] https://download.docker.com/linux/ubuntu xenial stable" \
+ && apt-get update \
+ && apt-cache policy docker-ce \
+ && apt-get install -y  docker-ce
