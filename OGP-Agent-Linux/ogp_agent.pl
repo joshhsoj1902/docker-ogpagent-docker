@@ -155,7 +155,7 @@ if (-e AGENT_LOG_FILE)
 open INPUTFILE, "<", SCREENRC_FILE or die $!;
 open OUTPUTFILE, ">", SCREENRC_TMP_FILE or die $!;
 my $dest = SCREEN_LOGS_DIR . "/screenlog.%t";
-while (<INPUTFILE>) 
+while (<INPUTFILE>)
 {
 	$_ =~ s/logfile.*/logfile $dest/g;
 	print OUTPUTFILE $_;
@@ -264,7 +264,7 @@ logger "Open Game Panel - Agent started - "
   . " - PID $$", 1;
 
 # Stop previous scheduler process if exists
-scheduler_stop();	
+scheduler_stop();
 # Create new object with default dispatcher for scheduled tasks
 my $cron = new Schedule::Cron( \&scheduler_dispatcher, {
                                         nofork => 1,
@@ -351,9 +351,9 @@ my $d = Frontier::Daemon::Forking->new(
 sub backup_home_log
 {
 	my ($home_id, $log_file) = @_;
-	
+
 	my $home_backup_dir = SCREEN_LOGS_DIR . "/home_id_" . $home_id;
-		
+
 	if( ! -e $home_backup_dir )
 	{
 		if( ! mkdir $home_backup_dir )
@@ -362,13 +362,13 @@ sub backup_home_log
 			return 1;
 		}
 	}
-	
+
 	my ($sec,$min,$hour,$mday,$mon,$year,$wday,$yday,$isdst) = localtime(time);
-	
+
 	my $backup_file_name =  $mday . $mon . $year . '_' . $hour . 'h' . $min . 'm' . $sec . "s.log";
-	
+
 	my $output_path = $home_backup_dir . "/" . $backup_file_name;
-	
+
 	# Used for deleting log files older than DELETE_LOGS_AFTER
 	my @file_list;
 	my @find_dirs; # directories to search
@@ -382,37 +382,37 @@ sub backup_home_log
 	my $seconds_per_day = 60*60*24; # seconds in a day
 	my $AGE = $days*$seconds_per_day; # age in seconds
 	push (@find_dirs, $home_backup_dir);
-	
-	# Create local copy of log file backup in the log_backups folder and current user home directory if SCREEN_LOG_LOCAL = 1 
+
+	# Create local copy of log file backup in the log_backups folder and current user home directory if SCREEN_LOG_LOCAL = 1
 	if(SCREEN_LOG_LOCAL == 1)
 	{
 		# Create local backups folder
 		my $local_log_folder = Path::Class::Dir->new("logs_backup");
-		
+
 		if(!-e $local_log_folder){
 			mkdir($local_log_folder);
 		}
-		
+
 		# Add full path to @find_dirs so that log files older than DELETE_LOGS_AFTER are deleted
 		my $fullpath_to_local_logs = Path::Class::Dir->new(getcwd(), "logs_backup");
 		push (@find_dirs, $fullpath_to_local_logs);
-		
+
 		my $log_local = $local_log_folder . "/" . $backup_file_name;
-		
+
 		# Delete the local log file if it already exists
 		if(-e $log_local){
 			unlink $log_local;
 		}
-		
+
 		# If the log file contains UPDATE in the filename, do not allow users to see it since it will contain steam credentials
 		# Will return -1 for not existing
 		my $isUpdate = index($log_file,SCREEN_TYPE_UPDATE);
-		
+
 		if($isUpdate == -1){
 			copy($log_file,$log_local);
 		}
 	}
-	
+
 	# Delete all files in @find_dirs older than DELETE_LOGS_AFTER days
 	find ( sub {
 		my $file = $File::Find::name;
@@ -420,16 +420,16 @@ sub backup_home_log
 			push (@file_list, $file);
 		}
 	}, @find_dirs);
- 
+
 	for my $file (@file_list) {
 		my @stats = stat($file);
 		if ($now-$stats[9] > $AGE) {
 			unlink $file;
 		}
 	}
-	
+
 	move($log_file,$output_path);
-	
+
 	return 0;
 }
 
@@ -469,50 +469,50 @@ sub create_screen_cmd_loop
 {
 	my ($screen_id, $exec_cmd, $envVars) = @_;
 	my $server_start_bashfile = $screen_id . "_startup_scr.sh";
-	
+
 	$exec_cmd = replace_OGP_Vars($screen_id, $exec_cmd);
-	
+
 	# Allow file to be overwritten
 	if(-e $server_start_bashfile){
 		secure_path_without_decrypt('chattr-i', $server_start_bashfile);
 	}
-	
+
 	# Create bash file that screen will run which spawns the server
 	# If it crashes without user intervention, it will restart
 	open (SERV_START_SCRIPT, '>', $server_start_bashfile);
-	
-	my $respawn_server_command = "#!/bin/bash" . "\n" 
+
+	my $respawn_server_command = "#!/bin/bash" . "\n"
 	. "function startServer(){" . "\n" ;
-	
+
 	if(defined $envVars && $envVars ne ""){
 		$respawn_server_command .= $envVars;
 	}
-	
+
 	$respawn_server_command .= "NUMSECONDS=`expr \$(date +%s)`" . "\n"
-	. "until " . $exec_cmd . "; do" . "\n" 
+	. "until " . $exec_cmd . "; do" . "\n"
 	. "let DIFF=(`date +%s` - \"\$NUMSECONDS\")" . "\n"
-	. "if [ \"\$DIFF\" -gt 15 ]; then" . "\n" 
+	. "if [ \"\$DIFF\" -gt 15 ]; then" . "\n"
 	. "NUMSECONDS=`expr \$(date +%s)`" . "\n"
-	. "echo \"Server '" . $exec_cmd . "' crashed with exit code \$?.  Respawning...\" >&2 " . "\n" 
-	. "fi" . "\n" 
-	. "sleep 3" . "\n" 
-	. "done" . "\n" 
+	. "echo \"Server '" . $exec_cmd . "' crashed with exit code \$?.  Respawning...\" >&2 " . "\n"
+	. "fi" . "\n"
+	. "sleep 3" . "\n"
+	. "done" . "\n"
 	. "let DIFF=(`date +%s` - \"\$NUMSECONDS\")" . "\n"
-	
+
 	. "if [ ! -e \"SERVER_STOPPED\" ] && [ \"\$DIFF\" -gt 15 ]; then" . "\n"
 	. "startServer" . "\n"
 	. "fi" . "\n"
 	. "}" . "\n"
 	. "startServer" . "\n";
-	
+
 	print SERV_START_SCRIPT $respawn_server_command;
 	close (SERV_START_SCRIPT);
-	
+
 	# Secure file
 	secure_path_without_decrypt('chattr+i', $server_start_bashfile);
-	
+
 	my $screen_exec_script = "bash " . $server_start_bashfile;
-	
+
 	return
 	  sprintf('export WINEDEBUG="fixme-all" && export DISPLAY=:1 && screen -d -m -t "%1$s" -c ' . SCREENRC_FILE . ' -S %1$s %2$s',
 			  $screen_id, $screen_exec_script);
@@ -526,14 +526,14 @@ sub replace_OGP_Vars{
 	my $steamInsFile = $screen_id_for_txt_update . "_install.txt";
 	my $steamCMDPath = STEAMCMD_CLIENT_DIR;
 	my $fullPath = Path::Class::File->new($steamCMDPath, $steamInsFile);
-	
+
 	# If the install file exists, the game can be auto updated, else it will be ignored by the game for improper syntax
 	# To generate the install file, the "Install/Update via Steam" button must be clicked on at least once!
 	if(-e $fullPath){
 		$exec_cmd =~ s/{OGP_STEAM_CMD_DIR}/$steamCMDPath/g;
 		$exec_cmd =~ s/{STEAMCMD_INSTALL_FILE}/$steamInsFile/g;
 	}
-	
+
 	return $exec_cmd;
 }
 
@@ -542,7 +542,7 @@ sub replace_OGP_Env_Vars{
 	my ($homeid, $homepath, $strToReplace) = @_;
 
 	$strToReplace =~ s/{OGP_HOME_DIR}/$homepath/g;
-	
+
 	return $strToReplace;
 }
 
@@ -607,11 +607,11 @@ sub check_steam_cmd_client
 		  "http://media.steampowered.com/client/" . $steam_client_file;
 		logger "Downloading the Steam client from $steam_client_url to '"
 		  . $steam_client_path . "'.";
-		
+
 		my $ua = LWP::UserAgent->new;
 		$ua->agent('Mozilla/5.0');
 		my $response = $ua->get($steam_client_url, ':content_file' => "$steam_client_path");
-		
+
 		unless ($response->is_success)
 		{
 			logger "Failed to download steam installer from "
@@ -692,22 +692,22 @@ sub universal_start_without_decrypt
 		$home_id, $home_path, $server_exe, $run_dir,
 		$startup_cmd, $server_port, $server_ip, $cpu, $nice, $preStart, $envVars
 	   ) = @_;
-	   
+
 	# Replace any {OGP_HOME_DIR} in the $start_cmd with the server's home directory path
 	$startup_cmd = replace_OGP_Env_Vars($home_id, $home_path, $startup_cmd);
-	   
+
 	if (is_screen_running_without_decrypt(SCREEN_TYPE_HOME, $home_id) == 1)
 	{
 		logger "This server is already running (ID: $home_id).";
 		return -14;
 	}
-	
+
 	if (!-e $home_path)
 	{
 		logger "Can't find server's install path [ $home_path ].";
 		return -10;
 	}
-	
+
 	my $uid = `id -u`;
 	chomp $uid;
 	my $gid = `id -g`;
@@ -715,7 +715,7 @@ sub universal_start_without_decrypt
 	my $path = $home_path;
 	$path =~ s/('+)/'\"$1\"'/g;
 	sudo_exec_without_decrypt('chown -Rf '.$uid.':'.$gid.' \''.$path.'\'');
-	
+
 	# Some game require that we are in the directory where the binary is.
 	my $game_binary_dir = Path::Class::Dir->new($home_path, $run_dir);
 	if ( -e $game_binary_dir && !chdir $game_binary_dir)
@@ -723,9 +723,9 @@ sub universal_start_without_decrypt
 		logger "Could not change to server binary directory $game_binary_dir.";
 		return -12;
 	}
-	
+
 	secure_path_without_decrypt('chattr-i', $server_exe);
-	
+
 	if (!-x $server_exe)
 	{
 		if (!chmod 0755, $server_exe)
@@ -734,14 +734,14 @@ sub universal_start_without_decrypt
 			return -13;
 		}
 	}
-	
+
 	if(defined $preStart && $preStart ne ""){
 		# Get it in the format that the startup file can use
 		$preStart = multiline_to_startup_comma_format($preStart);
 	}else{
 		$preStart = "";
 	}
-	
+
 	if(defined $envVars && $envVars ne ""){
 		# Replace variables in the envvars if they exist
 		my @prestartenvvars = split /[\r\n]+/, $envVars;
@@ -753,19 +753,19 @@ sub universal_start_without_decrypt
 				$envVarStr .= "$line\n";
 			}
 		}
-			
+
 		if(defined $envVarStr && $envVarStr ne ""){
 			$envVars = $envVarStr;
-		}	
-		
+		}
+
 		# Get it in the format that the startup file can use
 		$envVars = multiline_to_startup_comma_format($envVars);
 	}else{
 		$envVars = "";
 	}
-	
+
 	secure_path_without_decrypt('chattr+i', $server_exe);
-	
+
 	# Create startup file for the server.
 	my $startup_file =
 	  Path::Class::File->new(GAME_STARTUP_DIR, "$server_ip-$server_port");
@@ -780,37 +780,37 @@ sub universal_start_without_decrypt
 	{
 		logger "Cannot create file in " . $startup_file . " : $!";
 	}
-	
+
 	if(defined $preStart && $preStart ne ""){
 		# Get it in the format that the startup file can use
 		$preStart = startup_comma_format_to_multiline($preStart);
 	}else{
 		$preStart = "";
 	}
-	
+
 	if(defined $envVars && $envVars ne ""){
 		# Get it in the format that the startup file can use
-		$envVars = startup_comma_format_to_multiline($envVars);	
+		$envVars = startup_comma_format_to_multiline($envVars);
 	}else{
 		$envVars = "";
 	}
-	
+
 	# Create the startup string.
 	my $screen_id = create_screen_id(SCREEN_TYPE_HOME, $home_id);
 	my $file_extension = substr $server_exe, -4;
 	my $cli_bin;
 	my $command;
 	my $run_before_start;
-	
+
 	if($file_extension eq ".exe" or $file_extension eq ".bat")
 	{
 		$command = "wine $server_exe $startup_cmd";
-		
+
 		if ($cpu ne 'NA')
 		{
 			$command = "taskset -c $cpu wine $server_exe $startup_cmd";
 		}
-		
+
 		if(defined($Cfg::Preferences{ogp_autorestart_server}) &&  $Cfg::Preferences{ogp_autorestart_server} eq "1"){
 			deleteStoppedStatFile($home_path);
 			$cli_bin = create_screen_cmd_loop($screen_id, $command, $envVars);
@@ -821,12 +821,12 @@ sub universal_start_without_decrypt
 	elsif($file_extension eq ".jar")
 	{
 		$command = "$startup_cmd";
-		
+
 		if ($cpu ne 'NA')
 		{
 			$command = "taskset -c $cpu $startup_cmd";
 		}
-		
+
 		if(defined($Cfg::Preferences{ogp_autorestart_server}) &&  $Cfg::Preferences{ogp_autorestart_server} eq "1"){
 			deleteStoppedStatFile($home_path);
 			$cli_bin = create_screen_cmd_loop($screen_id, $command, $envVars);
@@ -837,12 +837,12 @@ sub universal_start_without_decrypt
 	else
 	{
 		$command = "./$server_exe $startup_cmd";
-		
+
 		if ($cpu ne 'NA')
 		{
 			$command = "taskset -c $cpu ./$server_exe $startup_cmd";
 		}
-		
+
 		if(defined($Cfg::Preferences{ogp_autorestart_server}) &&  $Cfg::Preferences{ogp_autorestart_server} eq "1"){
 			deleteStoppedStatFile($home_path);
 			$cli_bin = create_screen_cmd_loop($screen_id, $command, $envVars);
@@ -850,22 +850,22 @@ sub universal_start_without_decrypt
 			$cli_bin = create_screen_cmd($screen_id, $command);
 		}
 	}
-		
+
 	my $log_file = Path::Class::File->new(SCREEN_LOGS_DIR, "screenlog.$screen_id");
 	backup_home_log( $home_id, $log_file );
-	
+
 	logger
 	  "Startup command [ $cli_bin ] will be executed in dir $game_binary_dir.";
-	
+
 	# Run before start script and set environment variables which will affect create_screen_cmd only... loop already has the envvars as well
 	$run_before_start = run_before_start_commands($home_id, $home_path, $preStart, $envVars);
-	
+
 	system($cli_bin);
-	
+
 	sleep(1);
-	
+
 	renice_process_without_decrypt($home_id, $nice);
-		
+
 	chdir AGENT_RUN_DIR;
 	return 1;
 }
@@ -881,9 +881,9 @@ sub renice_process
 
 sub renice_process_without_decrypt
 {
-	my ($home_id, $nice) = @_;	
+	my ($home_id, $nice) = @_;
 	if ($nice != 0)
-	{				
+	{
 		my @pids = get_home_pids($home_id);
 		logger
 		  "Renicing pids [ @pids ] from home_id $home_id with nice value $nice.";
@@ -1033,9 +1033,9 @@ sub get_log
 	{
 		$log_file = Path::Class::File->new($home_path, $log_file);
 	}
-	
-	chmod 0644, $log_file;	
-	
+
+	chmod 0644, $log_file;
+
 	# Create local copy of current log file if SCREEN_LOG_LOCAL = 1
 	if(SCREEN_LOG_LOCAL == 1)
 	{
@@ -1044,13 +1044,13 @@ sub get_log
 		{
 			unlink $log_local;
 		}
-		
+
 		# Copy log file only if it's not an UPDATE type as it may contain steam credentials
 		if($screen_type eq SCREEN_TYPE_HOME){
 			copy($log_file, $log_local);
 		}
 	}
-	
+
 	# Regenerate the log file if it doesn't exist
 	unless ( -e $log_file )
 	{
@@ -1066,12 +1066,12 @@ sub get_log
 			return -8;
 		}
 	}
-	
+
 	# Return a few lines of output to the web browser
 	my(@modedlines) = `tail -n $nb_of_lines $log_file`;
-	
+
 	my $linecount = 0;
-	
+
 	foreach my $line (@modedlines) {
 		#Text replacements to remove the Steam user login from steamcmd logs for security reasons.
 		$line =~ s/login .*//g;
@@ -1086,8 +1086,8 @@ sub get_log
 		$line =~ s/�//g;
 		$modedlines[$linecount]=$line;
 		$linecount++;
-	} 
-	
+	}
+
 	my $encoded_content = encode_list(@modedlines);
 	chdir AGENT_RUN_DIR;
 	if(is_screen_running_without_decrypt($screen_type, $home_id) == 1)
@@ -1115,19 +1115,19 @@ sub stop_server_without_decrypt
 {
 	my ($home_id, $server_ip, $server_port, $control_protocol,
 		$control_password, $control_type, $home_path) = @_;
-		
+
 	my $startup_file = Path::Class::File->new(GAME_STARTUP_DIR, "$server_ip-$server_port");
-	
+
 	if (-e $startup_file)
 	{
 		logger "Removing startup flag " . $startup_file . "";
 		unlink($startup_file)
 		  or logger "Cannot remove the startup flag file $startup_file $!";
 	}
-	
+
 	# Create file indicator that the game server has been stopped if defined
 	if(defined($Cfg::Preferences{ogp_autorestart_server}) &&  $Cfg::Preferences{ogp_autorestart_server} eq "1"){
-		
+
 		# Get current directory and chdir into the game's home dir
 		my $curDir = getcwd();
 		chdir $home_path;
@@ -1135,11 +1135,11 @@ sub stop_server_without_decrypt
 		# Create stopped indicator file used by autorestart of OGP if server crashes
 		open(STOPFILE, '>', "SERVER_STOPPED");
 		close(STOPFILE);
-		
+
 		# Return to original directory
 		chdir $curDir;
 	}
-	
+
 	# Some validation checks for the variables.
 	if ($server_ip =~ /^\s*$/ || $server_port < 0 || $server_port > 65535)
 	{
@@ -1175,7 +1175,7 @@ sub stop_server_without_decrypt
 			my $rconCommand = "quit";
 			$rcon2->run($rconCommand);
 		}
-		
+
 		if (is_screen_running_without_decrypt(SCREEN_TYPE_HOME, $home_id) == 0)
 		{
 			logger "Stopped server $server_ip:$server_port with rcon quit.";
@@ -1187,13 +1187,13 @@ sub stop_server_without_decrypt
 		}
 
 		my @server_pids = get_home_pids($home_id);
-		
+
 		my $cnt;
 		foreach my $pid (@server_pids)
 		{
 			chomp($pid);
 			$cnt = kill 15, $pid;
-			
+
 			if ($cnt != 1)
 			{
 				$cnt = kill 9, $pid;
@@ -1218,13 +1218,13 @@ sub stop_server_without_decrypt
 	{
 		logger "Remote control protocol not available or PASSWORD NOT SET. Using kill signal instead.";
 		my @server_pids = get_home_pids($home_id);
-		
+
 		my $cnt;
 		foreach my $pid (@server_pids)
 		{
 			chomp($pid);
 			$cnt = kill 15, $pid;
-			
+
 			if ($cnt != 1)
 			{
 				$cnt = kill 9, $pid;
@@ -1247,7 +1247,7 @@ sub stop_server_without_decrypt
 	}
 }
 
-##### Send RCON command 
+##### Send RCON command
 ### Return 0 when error occurred on decryption.
 ### Return 1 on success
 sub send_rcon_command
@@ -1270,14 +1270,14 @@ sub send_rcon_command
 		}
 		return 0;
 	}
-	
+
 	# Some validation checks for the variables.
 	if ($server_ip =~ /^\s*$/ || $server_port < 0 || $server_port > 65535)
 	{
 		logger("Invalid IP:Port given $server_ip:$server_port.");
 		return 0;
 	}
-	
+
 	if ($control_password !~ /^\s*$/)
 	{
 		if ($control_protocol eq "rcon")
@@ -1291,13 +1291,13 @@ sub send_rcon_command
 								 );
 
 			logger "Sending RCON command to $server_ip:$server_port: \n$rconCommand \n  .";
-						
+
 			my(@modedlines) = $rcon->execute($rconCommand);
 			my $encoded_content = encode_list(@modedlines);
 			return "1;" . $encoded_content;
 		}
 		else
-		{		
+		{
 			if ($control_protocol eq "rcon2")
 			{
 				use KKrcon::HL2;
@@ -1307,9 +1307,9 @@ sub send_rcon_command
 									  password => $control_password,
 									  timeout  => 2
 									 );
-													
+
 				logger "Sending RCON command to $server_ip:$server_port: \n $rconCommand \n  .";
-						
+
 				my(@modedlines) = $rcon2->run($rconCommand);
 				my $encoded_content = encode_list(@modedlines);
 				return "1;" . $encoded_content;
@@ -1356,49 +1356,49 @@ sub dirlistfm
 {
 	return "Bad Encryption Key" unless(decrypt_param(pop(@_)) eq "Encryption checking OK");
 	my $datadir = &decrypt_param(@_);
-	
+
 	logger "Asked for dirlist of $datadir directory.";
-	
+
 	if (!-d $datadir)
 	{
 		logger "ERROR - Directory [ $datadir ] not found!";
 		return -1;
 	}
-	
+
 	if (!opendir(DIR, $datadir))
 	{
 		logger "ERROR - Can't open $datadir: $!";
 		return -2;
 	}
-	
+
 	my $dir = $datadir;
 	$dir =~ s/('+)/'"$1"'/g;
 	my $lsattr = `lsattr '$dir' 2>/dev/null`;
-	
+
 	my @attr_all = split /\n+/, $lsattr;
-	
+
 	my %attr = ();
-	
+
 	my ($a, $p, @f);
-	
+
 	foreach (@attr_all)
 	{
 		($a, $p) = split(/\s/, $_, 2);
 		@f = split /\//, $p;
 		$attr{$f[-1]}	= $a;
 	}
-	
+
 	my %dirfiles = ();
-	
+
 	my (
 		$dev,  $ino,   $mode,  $nlink, $uid,	 $gid, $rdev,
 		$size, $atime, $mtime, $ctime, $blksize, $blocks
 	   );
-	
+
 	my $count = 0;
-	
+
 	chdir($datadir);
-	
+
 	while (my $item = readdir(DIR))
 	{
 		#skip the . and .. special dirs
@@ -1410,11 +1410,11 @@ sub dirlistfm
 		 $dev,  $ino,   $mode,  $nlink, $uid,	 $gid, $rdev,
 		 $size, $atime, $mtime, $ctime, $blksize, $blocks
 		) = stat($item);
-		
+
 		$uid = getpwuid($uid);
 		$gid = getgrgid($gid);
 
-		#This if else logic determines what it is, File, Directory, other	
+		#This if else logic determines what it is, File, Directory, other
 		if (-T $item)
 		{
 			# print "File\n";
@@ -1454,13 +1454,13 @@ sub dirlistfm
 		$count++;
 	}
 	closedir(DIR);
-	
+
 	if ($count eq 0)
 	{
 		logger "Empty directory $datadir.";
 		return 1;
 	}
-		
+
 	chdir AGENT_RUN_DIR;
 	#Now we return it to the webpage, as array
 	return {%dirfiles};
@@ -1480,7 +1480,7 @@ sub readfile
 			close(BLANK);
 		}
 	}
-	
+
 	if (!open(USERFILE, '<', $userfile))
 	{
 		logger "ERROR - Can't open file $userfile for reading.";
@@ -1494,12 +1494,12 @@ sub readfile
 		$wholefile .= encode_base64($buf);
 	}
 	close(USERFILE);
-	
+
 	if(!defined $wholefile)
 	{
 		return "1; ";
 	}
-	
+
 	return "1;" . $wholefile;
 }
 
@@ -1613,7 +1613,7 @@ sub start_file_download
 			return -2;
 		}
 	}
-	
+
 	my $download_file_path = Path::Class::File->new($destination, "$filename");
 
 	my $pid = fork();
@@ -1622,7 +1622,7 @@ sub start_file_download
 		logger "Could not allocate resources for download.";
 		return -3;
 	}
-	
+
 	# Only the forked child goes here.
 	elsif ($pid == 0)
 	{
@@ -1630,11 +1630,11 @@ sub start_file_download
 													SSL_verify_mode => 0x00 } );
 		$ua->agent('Mozilla/5.0');
 		my $response = $ua->get($url, ':content_file' => "$download_file_path");
-		
+
 		if ($response->is_success)
 		{
 			logger "Successfully fetched $url and stored it to $download_file_path. Retval: ".$response->status_line;
-			
+
 			if (!-e $download_file_path)
 			{
 				logger "File $download_file_path does not exist.";
@@ -1694,9 +1694,9 @@ sub lock_additional_files{
 
 sub lock_additional_files_logic{
 	my ($homedir, $filesToLock, $action, $returnType) = @_;
-	
+
 	logger "Locking additional files specified in the XML.";
-	
+
 	my $commandStr = "";
 	$filesToLock = startup_comma_format_to_multiline($filesToLock);
 	$filesToLock = replace_OGP_Env_Vars("", $homedir, $filesToLock);
@@ -1721,11 +1721,11 @@ sub lock_additional_files_logic{
 			}
 		}
 	}
-	
+
 	if($commandStr ne ""){
 		return $commandStr;
 	}
-	
+
 	return "";
 }
 
@@ -1733,11 +1733,11 @@ sub run_before_start_commands
 {
 	#return "Bad Encryption Key" unless(decrypt_param(pop(@_)) eq "Encryption checking OK");
 	my ($server_id, $homedir, $beforestartcmd, $envVars) = @_;
-	
+
 	if ($homedir ne "" && $server_id ne ""){
 		# Run any prestart scripts
 		if (defined $beforestartcmd && $beforestartcmd ne "")
-		{		
+		{
 			logger "Running pre-start XML commands before starting server ID $server_id with a home directory of $homedir.";
 			my @prestartcmdlines = split /[\r\n]+/, $beforestartcmd;
 			my $prestartcmdfile = $homedir."/".'prestart_ogp.sh';
@@ -1752,8 +1752,8 @@ sub run_before_start_commands
 			chmod 0755, $prestartcmdfile;
 			system("bash $prestartcmdfile");
 		}
-		
-		
+
+
 		# Set and export any environment variables for game server developers unwilling to properly learn Linux
 		if (defined $envVars && $envVars ne ""){
 			my @prestartenvvars = split /[\r\n]+/, $envVars;
@@ -1765,11 +1765,11 @@ sub run_before_start_commands
 				}
 			}
 		}
-		
+
 	}else{
 		return -2;
 	}
-	
+
 	return 1;
 }
 
@@ -1788,7 +1788,7 @@ sub startup_comma_format_to_multiline{
 }
 
 sub create_secure_script
-{	
+{
 	my ($home_path, $exec_folder_path, $exec_path) = @_;
 	secure_path_without_decrypt('chattr-i', $home_path);
 	my $secure = "$home_path/secure.sh";
@@ -1812,12 +1812,12 @@ sub create_secure_script
 sub check_b4_chdir
 {
 	my ( $path ) = @_;
-	
+
 	my $uid = `id -u`;
 	chomp $uid;
 	my $gid = `id -g`;
-	chomp $gid;	
-		
+	chomp $gid;
+
 	if (!-e $path)
 	{
 		logger "$path does not exist yet. Trying to create it...";
@@ -1827,34 +1827,34 @@ sub check_b4_chdir
 			logger "Error creating $path . Errno: $!";
 			return -1;
 		}
-		
+
 		# Set perms on it as well
 		sudo_exec_without_decrypt('chown -Rf '.$uid.':'.$gid.' \''.$path.'\'');
-		
+
 	}
 	else
-	{	
+	{
 		# File or directory already exists
 		# Make sure it's owned by the agent
 		secure_path_without_decrypt('chattr-i', $path);
 	}
-	
+
 	if (!chdir $path)
 	{
 		logger "Unable to change dir to '$path'.";
 		return -1;
 	}
-	
+
 	return 0;
 }
 
 sub create_bash_scripts
 {
 	my ( $home_path, $bash_scripts_path, $precmd, $postcmd, @installcmds ) = @_;
-	
+
 	$home_path         =~ s/('+)/'\"$1\"'/g;
 	$bash_scripts_path =~ s/('+)/'\"$1\"'/g;
-	
+
 	my @precmdlines = split /[\r\n]+/, $precmd;
 	my $precmdfile = 'preinstall.sh';
 	open  FILE, '>', $precmdfile;
@@ -1864,7 +1864,7 @@ sub create_bash_scripts
 	}
 	close FILE;
 	chmod 0755, $precmdfile;
-	
+
 	my @postcmdlines = split /[\r\n]+/, $postcmd;
 	my $postcmdfile = 'postinstall.sh';
 	open  FILE, '>', $postcmdfile;
@@ -1881,7 +1881,7 @@ sub create_bash_scripts
 			   "rm -f runinstall.sh\n";
 	close FILE;
 	chmod 0755, $postcmdfile;
-	
+
 	my $installfile = 'runinstall.sh';
 	open  FILE, '>', $installfile;
 	print FILE "#!/bin/bash\n".
@@ -1896,7 +1896,7 @@ sub create_bash_scripts
 			   "./$postcmdfile\n";
 	close FILE;
 	chmod 0755, $installfile;
-	
+
 	return $installfile;
 }
 
@@ -1912,22 +1912,22 @@ sub start_rsync_install
 	{
 		return 0;
 	}
-	
+
 	secure_path_without_decrypt('chattr-i', $home_path);
-	
+
 	create_secure_script($home_path, $exec_folder_path, $exec_path);
 
 	my $bash_scripts_path = MANUAL_TMP_DIR . "/home_id_" . $home_id;
-	
+
 	if ( check_b4_chdir($bash_scripts_path) != 0)
 	{
 		return 0;
 	}
-	
+
 	# Rsync install require the rsync binary to exist in the system
 	# to enable this functionality.
 	my $rsync_binary = Path::Class::File->new("/usr/bin", "rsync");
-	
+
 	if (!-f $rsync_binary)
 	{
 		logger "Failed to start rsync update from "
@@ -1937,13 +1937,13 @@ sub start_rsync_install
 	}
 
 	my $screen_id = create_screen_id(SCREEN_TYPE_UPDATE, $home_id);
-	
+
 	my $log_file = Path::Class::File->new(SCREEN_LOGS_DIR, "screenlog.$screen_id");
-	
+
 	if(defined $filesToLockUnlock && $filesToLockUnlock ne ""){
 		$postcmd .= "\n" . lock_additional_files_logic($home_path, $filesToLockUnlock, "lock", "str");
 	}
-	
+
 	backup_home_log( $home_id, $log_file );
 	my $path	= $home_path;
 	$path		=~ s/('+)/'\"$1\"'/g;
@@ -1953,7 +1953,7 @@ sub start_rsync_install
 	my $screen_cmd = create_screen_cmd($screen_id, "./$installfile");
 	logger "Running rsync update: /usr/bin/rsync --archive --compress --copy-links --update --verbose rsync://$url '$home_path'";
 	system($screen_cmd);
-	
+
 	chdir AGENT_RUN_DIR;
 	return 1;
 }
@@ -1966,38 +1966,38 @@ sub master_server_update
 {
 	return "Bad Encryption Key" unless(decrypt_param(pop(@_)) eq "Encryption checking OK");
 	my ($home_id,$home_path,$ms_home_id,$ms_home_path,$exec_folder_path,$exec_path,$precmd,$postcmd) = decrypt_params(@_);
-	
+
 	if ( check_b4_chdir($home_path) != 0)
 	{
 		return 0;
 	}
-	
+
 	secure_path_without_decrypt('chattr-i', $home_path);
-		
+
 	create_secure_script($home_path, $exec_folder_path, $exec_path);
-			
+
 	my $bash_scripts_path = MANUAL_TMP_DIR . "/home_id_" . $home_id;
-	
+
 	if ( check_b4_chdir($bash_scripts_path) != 0)
 	{
 		return 0;
 	}
 
 	my $screen_id = create_screen_id(SCREEN_TYPE_UPDATE, $home_id);
-	
+
 	my $log_file = Path::Class::File->new(SCREEN_LOGS_DIR, "screenlog.$screen_id");
-	
+
 	backup_home_log( $home_id, $log_file );
-	
+
 	my $my_home_path = $home_path;
 	$my_home_path =~ s/('+)/'\"$1\"'/g;
 	$exec_path =~ s/\Q$home_path\E//g;
 	$exec_path =~ s/^\///g;
 	$exec_path =~ s/('+)/'\"$1\"'/g;
 	$ms_home_path =~ s/('+)/'\"$1\"'/g;
-	
+
 	my @installcmds = ("cd '$ms_home_path'");
-	
+
 	## Copy files that match the extensions listed at extPatterns.txt
 	open(EXT_PATTERNS, '<', Path::Class::File->new(AGENT_RUN_DIR, "extPatterns.txt"))
 		  || logger "Error reading patterns file $!";
@@ -2008,19 +2008,19 @@ sub master_server_update
 		push (@installcmds, "find  -iname \\\*.$patern -exec cp -Rfp --parents {} '$my_home_path'/ \\\;");
 	}
 	close EXT_PATTERNS;
-	
+
 	## Copy the server executable so it can be secured with chattr +i
 	push (@installcmds, "cp -vf --parents '$exec_path' '$my_home_path'");
-	
+
 	## Do symlinks for each of the other files
 	push (@installcmds, "cp -vuRfs  '$ms_home_path'/* '$my_home_path'");
-	
+
 	my $installfile = create_bash_scripts( $home_path, $bash_scripts_path, $precmd, $postcmd, @installcmds );
 
 	my $screen_cmd = create_screen_cmd($screen_id, "./$installfile");
 	logger "Running master server update from home ID $home_id to home ID $ms_home_id";
 	system($screen_cmd);
-	
+
 	chdir AGENT_RUN_DIR;
 	return 1;
 }
@@ -2038,23 +2038,23 @@ sub steam_cmd
 sub steam_cmd_without_decrypt
 {
 	my ($home_id, $home_path, $mod, $modname, $betaname, $betapwd, $user, $pass, $guard, $exec_folder_path, $exec_path, $precmd, $postcmd, $cfg_os, $filesToLockUnlock) = @_;
-	
+
 	if ( check_b4_chdir($home_path) != 0)
 	{
 		return 0;
 	}
-	
+
 	secure_path_without_decrypt('chattr-i', $home_path);
-	
+
 	create_secure_script($home_path, $exec_folder_path, $exec_path);
-	
+
 	my $bash_scripts_path = MANUAL_TMP_DIR . "/home_id_" . $home_id;
-	
+
 	if ( check_b4_chdir($bash_scripts_path) != 0)
 	{
 		return 0;
 	}
-	
+
 	my $screen_id = create_screen_id(SCREEN_TYPE_UPDATE, $home_id);
 	my $screen_id_for_txt_update = substr ($screen_id, rindex($screen_id, '_') + 1);
 	my $steam_binary = Path::Class::File->new(STEAMCMD_CLIENT_DIR, "steamcmd.sh");
@@ -2080,13 +2080,13 @@ sub steam_cmd_without_decrypt
 	{
 		print FILE "login anonymous\n";
 	}
-	
+
 	print FILE "force_install_dir \"$home_path\"\n";
 
 	if($modname ne "")
 	{
 		print FILE "app_set_config $mod mod $modname\n";
-		print FILE "app_update $mod mod $modname validate\n";	
+		print FILE "app_update $mod mod $modname validate\n";
 	}
 
 	if($betaname ne "" && $betapwd ne "")
@@ -2101,25 +2101,25 @@ sub steam_cmd_without_decrypt
 	{
 		print FILE "app_update $mod\n";
 	}
-	
+
 	print FILE "exit\n";
 	close FILE;
-	
+
 	my $log_file = Path::Class::File->new(SCREEN_LOGS_DIR, "screenlog.$screen_id");
 	backup_home_log( $home_id, $log_file );
-	
+
 	my $postcmd_mod = $postcmd;
-	
+
 	if(defined $filesToLockUnlock && $filesToLockUnlock ne ""){
 		$postcmd_mod .= "\n" . lock_additional_files_logic($home_path, $filesToLockUnlock, "lock", "str");
 	}
-	
+
 	my @installcmds = ("$steam_binary +runscript $installtxt +exit");
-	
+
 	my $installfile = create_bash_scripts( $home_path, $bash_scripts_path, $precmd, $postcmd_mod, @installcmds );
-	
+
 	my $screen_cmd = create_screen_cmd($screen_id, "./$installfile");
-	
+
 	logger "Running steam update: $steam_binary +runscript $installtxt +exit";
 	system($screen_cmd);
 
@@ -2329,7 +2329,7 @@ sub compress_files_without_decrypt
 		logger "compress_files: Destination path ( $destination ) could not be found.";
 		return -1;
 	}
-	
+
 	chdir $destination;
 	my @items = split /\Q\n/, $files;
 	my @inventory;
@@ -2347,7 +2347,7 @@ sub compress_files_without_decrypt
 				elsif (-d $item)
 				{
 					$zip->addTree( $item, $item );
-				} 
+				}
 			}
 		}
 		# Save the file
@@ -2374,7 +2374,7 @@ sub compress_files_without_decrypt
 					@inventory = ();
 					find (sub { push @inventory, $File::Find::name }, $item);
 					$tar->add_files( @inventory );
-				} 
+				}
 			}
 		}
 		# Save the file
@@ -2401,7 +2401,7 @@ sub compress_files_without_decrypt
 					@inventory = ();
 					find (sub { push @inventory, $File::Find::name }, $item);
 					$tar->add_files( @inventory );
-				} 
+				}
 			}
 		}
 		# Save the file
@@ -2428,7 +2428,7 @@ sub compress_files_without_decrypt
 					@inventory = ();
 					find (sub { push @inventory, $File::Find::name }, $item);
 					$tar->add_files( @inventory );
-				} 
+				}
 			}
 		}
 		# Save the file
@@ -2610,7 +2610,7 @@ sub restart_server_without_decrypt
 		$control_password, $control_type, $home_path, $server_exe, $run_dir,
 		$cmd, $cpu, $nice, $preStart, $envVars) = @_;
 
-	if (stop_server_without_decrypt($home_id, $server_ip, 
+	if (stop_server_without_decrypt($home_id, $server_ip,
 									$server_port, $control_protocol,
 									$control_password, $control_type, $home_path) == 0)
 	{
@@ -2661,20 +2661,20 @@ sub secure_path
 }
 
 sub secure_path_without_decrypt
-{   
+{
 	my ($action, $file_path, $returnType) = @_;
 	my $checkIfFileExists = 1;
-	
+
 	if(defined $returnType && $returnType eq "str"){
 		$checkIfFileExists = 0;
 	}
-	
+
 	if($checkIfFileExists){
 		if(! -e $file_path){
 			return -1;
 		}
 	}
-	
+
 	my $uid = `id -u`;
 	chomp $uid;
 	my $gid = `id -g`;
@@ -2696,12 +2696,12 @@ sub secure_path_without_decrypt
 			return sudo_exec_without_decrypt('chattr -Rf -i \''.$file_path.'\' && chown -Rf '.$uid.':'.$gid.' \''.$file_path.'\'');
 		}
 	}
-	
+
 	return -1;
 }
 
 sub get_chattr
-{   
+{
 	return "Bad Encryption Key" unless(decrypt_param(pop(@_)) eq "Encryption checking OK");
 	my ($file_path) = decrypt_params(@_);
 	my $file = $file_path;
@@ -2713,30 +2713,30 @@ sub ftp_mgr
 {
 	return "Bad Encryption Key" unless(decrypt_param(pop(@_)) eq "Encryption checking OK");
 	my ($action, $login, $password, $home_path) = decrypt_params(@_);
-	
+
 	my $uid = `id -u`;
 	chomp $uid;
 	my $gid = `id -g`;
 	chomp $gid;
-	
+
 	$login =~ s/('+)/'\"$1\"'/g;
 	$password =~ s/('+)/'\"$1\"'/g;
 	$home_path =~ s/('+)/'\"$1\"'/g;
-	
+
 	if(!defined($Cfg::Preferences{ogp_manages_ftp}) || (defined($Cfg::Preferences{ogp_manages_ftp}) &&  $Cfg::Preferences{ogp_manages_ftp} eq "1")){
 		if( defined($Cfg::Preferences{ftp_method}) && $Cfg::Preferences{ftp_method} eq "IspConfig")
 		{
 			use constant ISPCONFIG_DIR => Path::Class::Dir->new(AGENT_RUN_DIR, 'IspConfig');
 			use constant FTP_USERS_DIR => Path::Class::Dir->new(ISPCONFIG_DIR, 'ftp_users');
-				
+
 			if (!-d FTP_USERS_DIR && !mkdir FTP_USERS_DIR)
 			{
 				print "Could not create " . FTP_USERS_DIR . " directory $!.";
 				return -1;
 			}
-			
+
 			chdir ISPCONFIG_DIR;
-			
+
 			if($action eq "list")
 			{
 				my $users_list;
@@ -2781,13 +2781,13 @@ sub ftp_mgr
 			chdir EHCP_DIR;
 			my $phpScript;
 			my $phpOut;
-			
+
 			chmod 0777, 'ehcp_ftp_log.txt';
-			
+
 			# In order to access the FTP files, the vsftpd user needs to be added to the ogp group
-			sudo_exec_without_decrypt("usermod -a -G '$gid' ftp"); 
-			sudo_exec_without_decrypt("usermod -a -G '$gid' vsftpd"); 
-			
+			sudo_exec_without_decrypt("usermod -a -G '$gid' ftp");
+			sudo_exec_without_decrypt("usermod -a -G '$gid' vsftpd");
+
 			if($action eq "list")
 			{
 				return "1;".encode_list(`php-cgi -f listAllUsers.php`);
@@ -2802,13 +2802,13 @@ sub ftp_mgr
 			{
 				$phpScript = `php-cgi -f addAccount.php username=\'$login\' password=\'$password\' dir=\'$home_path\' uid=$uid gid=$gid`;
 				$phpOut = `php-cgi -f syncftp.php`;
-				return $phpScript;	
+				return $phpScript;
 			}
 			elsif($action eq "passwd")
 			{
 				$phpScript = `php-cgi -f updatePass.php username=\'$login\' password=\'$password\'`;
 				$phpOut = `php-cgi -f syncftp.php`;
-				return $phpScript ;	
+				return $phpScript ;
 			}
 			elsif($action eq "show")
 			{
@@ -2883,18 +2883,18 @@ sub ftp_mgr
 			elsif($action eq "usermod")
 			{
 				my $update_account = "pure-pw usermod '$login' -u $uid -g $gid";
-				
+
 				my @account_settings = split /[\n]+/, $password;
-				
+
 				foreach my $setting (@account_settings) {
 					my ($key, $value) = split /[\t]+/, $setting;
-					
+
 					if( $key eq 'Directory' )
 					{
 						$value =~ s/('+)/'\"$1\"'/g;
 						$update_account .= " -d '$value'";
 					}
-						
+
 					if( $key eq 'Full_name' )
 					{
 						if(  $value ne "" )
@@ -2907,7 +2907,7 @@ sub ftp_mgr
 							$update_account .= ' -c ""';
 						}
 					}
-					
+
 					if( $key eq 'Download_bandwidth' && $value ne ""  )
 					{
 						my $Download_bandwidth;
@@ -2921,7 +2921,7 @@ sub ftp_mgr
 						}
 						$update_account .= " -t " . $Download_bandwidth;
 					}
-					
+
 					if( $key eq 'Upload___bandwidth' && $value ne "" )
 					{
 						my $Upload___bandwidth;
@@ -2935,7 +2935,7 @@ sub ftp_mgr
 						}
 						$update_account .= " -T " . $Upload___bandwidth;
 					}
-					
+
 					if( $key eq 'Max_files' )
 					{
 						if( $value eq "0" )
@@ -2951,7 +2951,7 @@ sub ftp_mgr
 							$update_account .= ' -n ""';
 						}
 					}
-										
+
 					if( $key eq 'Max_size' )
 					{
 						if( $value ne "" && $value ne "0" )
@@ -2963,24 +2963,24 @@ sub ftp_mgr
 							$update_account .= ' -N ""';
 						}
 					}
-										
+
 					if( $key eq 'Ratio' && $value ne ""  )
 					{
 						my($upload_ratio,$download_ratio) = split/:/,$value;
-						
+
 						if($upload_ratio eq "0")
 						{
 							$upload_ratio = "\"\"";
 						}
 						$update_account .= " -q " . $upload_ratio;
-						
+
 						if($download_ratio eq "0")
 						{
 							$download_ratio = "\"\"";
 						}
 						$update_account .= " -Q " . $download_ratio;
 					}
-					
+
 					if( $key eq 'Allowed_client_IPs' )
 					{
 						if( $value ne "" )
@@ -2992,7 +2992,7 @@ sub ftp_mgr
 							$update_account .= ' -r ""';
 						}
 					}
-										
+
 					if( $key eq 'Denied__client_IPs' )
 					{
 						if( $value ne "" )
@@ -3004,7 +3004,7 @@ sub ftp_mgr
 							$update_account .= ' -R ""';
 						}
 					}
-					
+
 					if( $key eq 'Allowed_local__IPs' )
 					{
 						if( $value ne "" )
@@ -3016,7 +3016,7 @@ sub ftp_mgr
 							$update_account .= ' -i ""';
 						}
 					}
-										
+
 					if( $key eq 'Denied__local__IPs' )
 					{
 						if( $value ne "" )
@@ -3028,13 +3028,13 @@ sub ftp_mgr
 							$update_account .= ' -I ""';
 						}
 					}
-					
-						
+
+
 					if( $key eq 'Max_sim_sessions' && $value ne "" )
 					{
 						$update_account .= " -y " . $value;
 					}
-					
+
 					if ( $key eq 'Time_restrictions'  )
 					{
 						if( $value eq "0000-0000")
@@ -3306,7 +3306,7 @@ sub agent_restart
 		{
 			my $init_pid	= `cat ogp_agent_run.pid`;
 			chomp($init_pid);
-			
+
 			if(kill 0, $init_pid)
 			{
 				my $or_exist	= "";
@@ -3321,7 +3321,7 @@ sub agent_restart
 						$or_exist = " -o -e /proc/$agent_pid";
 					}
 				}
-				
+
 				open (AGENT_RESTART_SCRIPT, '>', 'tmp_restart.sh');
 				my $restart = "echo -n \"Stopping OGP Agent...\"\n".
 							  "kill $init_pid\n".
@@ -3429,7 +3429,7 @@ sub scheduler_add_task
 		print TASKS "$new_task\n";
 		logger "Created new task: $new_task";
 		close(TASKS);
-		scheduler_stop();	
+		scheduler_stop();
 		# Create new object with default dispatcher for scheduled tasks
 		$cron = new Schedule::Cron( \&scheduler_dispatcher, {
 												nofork => 1,
@@ -3546,10 +3546,10 @@ sub scheduler_read_tasks
 		scheduler_stop();
 		return -1;
 	}
-	
+
 	my $i = 0;
 	while (<TASKS>)
-	{	
+	{
 		next if $_ =~ /^(#.*|[\s|\t]*?\n)/;
 		my ($minute, $hour, $dayOfTheMonth, $month, $dayOfTheWeek, @args) = split(' ', $_);
 		my $time = "$minute $hour $dayOfTheMonth $month $dayOfTheWeek";
@@ -3625,14 +3625,14 @@ sub get_file_part
 		logger "ERROR - Can't open file $file for reading.";
 		return -1;
 	}
-	
+
 	binmode(FILE);
-	
-	if($offset != 0)  
+
+	if($offset != 0)
 	{
 		return -1 unless seek FILE, $offset, 0;
 	}
-	
+
 	my $data = "";
 	my ($n, $buf);
 	my $limit = $offset + 60 * 57 * 1000; #Max 3420Kb (1000 iterations) (top statistics ~ VIRT 116m, RES 47m)
@@ -3641,7 +3641,7 @@ sub get_file_part
 		$offset += $n;
 	}
 	close(FILE);
-	
+
     if( $data ne "" )
 	{
 		my $b64zlib = encode_base64(compress($data,9));
@@ -3670,7 +3670,7 @@ sub shell_action
 {
 	return "Bad Encryption Key" unless(decrypt_param(pop(@_)) eq "Encryption checking OK");
 	my ($action, $arguments) = decrypt_params(@_);
-	
+
 	if($action eq 'remove_file')
 	{
 		chomp($arguments);
@@ -3863,7 +3863,7 @@ sub remote_query
 		chdir($php_query_dir->subdir('lgsl'));
 		my $cmd = $PHP_CGI .
 				" -f lgsl_feed.php" .
-				" lgsl_type=" . $game_type . 
+				" lgsl_type=" . $game_type .
 				" ip=" . $ip .
 				" c_port=" . $c_port .
 				" q_port=" . $q_port .
@@ -3883,7 +3883,7 @@ sub remote_query
 		chdir($php_query_dir->subdir('gameq'));
 		my $cmd = $PHP_CGI .
 				" -f gameq_feed.php" .
-				" game_type=" . $game_type . 
+				" game_type=" . $game_type .
 				" ip=" . $ip .
 				" c_port=" . $c_port .
 				" q_port=" . $q_port .

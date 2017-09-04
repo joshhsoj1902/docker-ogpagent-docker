@@ -13,7 +13,7 @@ RUN curl -sSLf -z /usr/local/bin/gomplate -o /usr/local/bin/gomplate https://git
 
 RUN apt-get update \
  && apt-get install -y software-properties-common \
-                       python-software-properties \ 
+                       python-software-properties \
                        apt-transport-https \
                        ca-certificates \
                        curl \
@@ -24,3 +24,6 @@ RUN curl -fsSL https://download.docker.com/linux/ubuntu/gpg | apt-key add - \
  && apt-get update \
  && apt-cache policy docker-ce \
  && apt-get install -y  docker-ce
+
+
+COPY OGP-Agent-Linux /opt/agent
