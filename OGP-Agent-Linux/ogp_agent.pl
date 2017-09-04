@@ -285,69 +285,6 @@ if(-e Path::Class::File->new(FD_DIR, 'Settings.pm'))
 	}
 }
 
-# my $d = Frontier::Daemon::Forking->new(
-# 			 methods => {
-# 				 is_screen_running				=> \&is_screen_running,
-# 				 universal_start			  	=> \&universal_start,
-# 				 renice_process					=> \&renice_process,
-# 				 cpu_count						=> \&cpu_count,
-# 				 rfile_exists				 	=> \&rfile_exists,
-# 				 quick_chk						=> \&quick_chk,
-# 				 steam_cmd						=> \&steam_cmd,
-# 				 fetch_steam_version			=> \&fetch_steam_version,
-# 				 installed_steam_version		=> \&installed_steam_version,
-# 				 automatic_steam_update			=> \&automatic_steam_update,
-# 				 get_log					  	=> \&get_log,
-# 				 stop_server				  	=> \&stop_server,
-# 				 send_rcon_command				=> \&send_rcon_command,
-# 				 dirlist						=> \&dirlist,
-# 				 dirlistfm						=> \&dirlistfm,
-# 				 readfile					 	=> \&readfile,
-# 				 writefile						=> \&writefile,
-# 				 rebootnow						=> \&rebootnow,
-# 				 what_os					  	=> \&what_os,
-# 				 start_file_download		  	=> \&start_file_download,
-# 				 lock_additional_files          => \&lock_additional_files,
-# 				 is_file_download_in_progress 	=> \&is_file_download_in_progress,
-# 				 uncompress_file			  	=> \&uncompress_file,
-# 				 discover_ips					=> \&discover_ips,
-# 				 mon_stats						=> \&mon_stats,
-# 				 exec						 	=> \&exec,
-# 				 clone_home				   		=> \&clone_home,
-# 				 remove_home					=> \&remove_home,
-# 				 start_rsync_install			=> \&start_rsync_install,
-# 				 rsync_progress			   		=> \&rsync_progress,
-# 				 restart_server			   		=> \&restart_server,
-# 				 sudo_exec						=> \&sudo_exec,
-# 				 master_server_update			=> \&master_server_update,
-# 				 secure_path					=> \&secure_path,
-# 				 get_chattr						=> \&get_chattr,
-# 				 ftp_mgr						=> \&ftp_mgr,
-# 				 compress_files					=> \&compress_files,
-# 				 stop_fastdl					=> \&stop_fastdl,
-# 				 restart_fastdl					=> \&restart_fastdl,
-# 				 fastdl_status					=> \&fastdl_status,
-# 				 fastdl_get_aliases				=> \&fastdl_get_aliases,
-# 				 fastdl_add_alias				=> \&fastdl_add_alias,
-# 				 fastdl_del_alias				=> \&fastdl_del_alias,
-# 				 fastdl_get_info				=> \&fastdl_get_info,
-# 				 fastdl_create_config			=> \&fastdl_create_config,
-# 				 agent_restart					=> \&agent_restart,
-# 				 scheduler_add_task				=> \&scheduler_add_task,
-# 				 scheduler_del_task				=> \&scheduler_del_task,
-# 				 scheduler_list_tasks			=> \&scheduler_list_tasks,
-# 				 scheduler_edit_task			=> \&scheduler_edit_task,
-# 				 get_file_part					=> \&get_file_part,
-# 				 stop_update					=> \&stop_update,
-# 				 shell_action					=> \&shell_action,
-# 				 remote_query					=> \&remote_query
-# 			 },
-# 			 debug	 => 4,
-# 			 LocalPort => AGENT_PORT,
-# 			 LocalAddr => AGENT_IP,
-# 			 ReuseAddr => '1'
-# ) or die "Couldn't start OGP Agent: $!";
-
 my $d = Frontier::Daemon::Forking->new(
 			 methods => {
 				 is_screen_running				=> \&is_screen_running,
@@ -773,11 +710,15 @@ sub universal_start_without_decrypt
 		return -14;
 	}
 
-	if (!-e $home_path)
-	{
-		logger "Can't find server's install path [ $home_path ].";
-		return -10;
-	}
+	# if (!-e $home_path)
+	# {
+	# 	logger "Can't find server's install path [ $home_path ].";
+	# 	return -10;
+	# }
+
+
+  sudo_exec_without_decrypt('docker stack deploy -c "docker-compose.gmod.yml" gmod');
+  return 1;
 
 	my $uid = `id -u`;
 	chomp $uid;
@@ -795,16 +736,16 @@ sub universal_start_without_decrypt
 		return -12;
 	}
 
-	secure_path_without_decrypt('chattr-i', $server_exe);
-
-	if (!-x $server_exe)
-	{
-		if (!chmod 0755, $server_exe)
-		{
-			logger "The $server_exe file is not executable.";
-			return -13;
-		}
-	}
+	# secure_path_without_decrypt('chattr-i', $server_exe);
+  #
+	# if (!-x $server_exe)
+	# {
+	# 	if (!chmod 0755, $server_exe)
+	# 	{
+	# 		logger "The $server_exe file is not executable.";
+	# 		return -13;
+	# 	}
+	# }
 
 	if(defined $preStart && $preStart ne ""){
 		# Get it in the format that the startup file can use
@@ -1046,6 +987,8 @@ sub rfile_exists
 {
   logger "rfile_exists";
 	return "Bad Encryption Key" unless(decrypt_param(pop(@_)) eq "Encryption checking OK");
+
+  return 0;
 	chdir AGENT_RUN_DIR;
 	my $checkFile = decrypt_param(@_);
 
@@ -1426,10 +1369,11 @@ sub send_rcon_command
 ### @return -1 If cannot open the directory.
 sub dirlist
 {
-  logger "send_rcon_command";
+  logger "dirlist";
 	return "Bad Encryption Key" unless(decrypt_param(pop(@_)) eq "Encryption checking OK");
 	my ($datadir) = &decrypt_param(@_);
 	logger "Asked for dirlist of $datadir directory.";
+  return "foo;bar";
 	if (!-d $datadir)
 	{
 		logger "ERROR - Directory [ $datadir ] not found!";
