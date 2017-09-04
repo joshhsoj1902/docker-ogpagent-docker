@@ -285,6 +285,69 @@ if(-e Path::Class::File->new(FD_DIR, 'Settings.pm'))
 	}
 }
 
+# my $d = Frontier::Daemon::Forking->new(
+# 			 methods => {
+# 				 is_screen_running				=> \&is_screen_running,
+# 				 universal_start			  	=> \&universal_start,
+# 				 renice_process					=> \&renice_process,
+# 				 cpu_count						=> \&cpu_count,
+# 				 rfile_exists				 	=> \&rfile_exists,
+# 				 quick_chk						=> \&quick_chk,
+# 				 steam_cmd						=> \&steam_cmd,
+# 				 fetch_steam_version			=> \&fetch_steam_version,
+# 				 installed_steam_version		=> \&installed_steam_version,
+# 				 automatic_steam_update			=> \&automatic_steam_update,
+# 				 get_log					  	=> \&get_log,
+# 				 stop_server				  	=> \&stop_server,
+# 				 send_rcon_command				=> \&send_rcon_command,
+# 				 dirlist						=> \&dirlist,
+# 				 dirlistfm						=> \&dirlistfm,
+# 				 readfile					 	=> \&readfile,
+# 				 writefile						=> \&writefile,
+# 				 rebootnow						=> \&rebootnow,
+# 				 what_os					  	=> \&what_os,
+# 				 start_file_download		  	=> \&start_file_download,
+# 				 lock_additional_files          => \&lock_additional_files,
+# 				 is_file_download_in_progress 	=> \&is_file_download_in_progress,
+# 				 uncompress_file			  	=> \&uncompress_file,
+# 				 discover_ips					=> \&discover_ips,
+# 				 mon_stats						=> \&mon_stats,
+# 				 exec						 	=> \&exec,
+# 				 clone_home				   		=> \&clone_home,
+# 				 remove_home					=> \&remove_home,
+# 				 start_rsync_install			=> \&start_rsync_install,
+# 				 rsync_progress			   		=> \&rsync_progress,
+# 				 restart_server			   		=> \&restart_server,
+# 				 sudo_exec						=> \&sudo_exec,
+# 				 master_server_update			=> \&master_server_update,
+# 				 secure_path					=> \&secure_path,
+# 				 get_chattr						=> \&get_chattr,
+# 				 ftp_mgr						=> \&ftp_mgr,
+# 				 compress_files					=> \&compress_files,
+# 				 stop_fastdl					=> \&stop_fastdl,
+# 				 restart_fastdl					=> \&restart_fastdl,
+# 				 fastdl_status					=> \&fastdl_status,
+# 				 fastdl_get_aliases				=> \&fastdl_get_aliases,
+# 				 fastdl_add_alias				=> \&fastdl_add_alias,
+# 				 fastdl_del_alias				=> \&fastdl_del_alias,
+# 				 fastdl_get_info				=> \&fastdl_get_info,
+# 				 fastdl_create_config			=> \&fastdl_create_config,
+# 				 agent_restart					=> \&agent_restart,
+# 				 scheduler_add_task				=> \&scheduler_add_task,
+# 				 scheduler_del_task				=> \&scheduler_del_task,
+# 				 scheduler_list_tasks			=> \&scheduler_list_tasks,
+# 				 scheduler_edit_task			=> \&scheduler_edit_task,
+# 				 get_file_part					=> \&get_file_part,
+# 				 stop_update					=> \&stop_update,
+# 				 shell_action					=> \&shell_action,
+# 				 remote_query					=> \&remote_query
+# 			 },
+# 			 debug	 => 4,
+# 			 LocalPort => AGENT_PORT,
+# 			 LocalAddr => AGENT_IP,
+# 			 ReuseAddr => '1'
+# ) or die "Couldn't start OGP Agent: $!";
+
 my $d = Frontier::Daemon::Forking->new(
 			 methods => {
 				 is_screen_running				=> \&is_screen_running,
@@ -565,17 +628,20 @@ sub decrypt_param
 	$param = decode_base64($param);
 	$param = Crypt::XXTEA::decrypt($param, AGENT_KEY);
 	$param = decode_base64($param);
+  logger "Param  $param";
 	return $param;
 }
 
 sub decrypt_params
 {
 	my @params;
+  logger "vvvvvvvvvvvvvvvvvvv";
 	foreach my $param (@_)
 	{
 		$param = &decrypt_param($param);
 		push(@params, $param);
 	}
+  logger "^^^^^^^^^^^^^^^^^";
 	return @params;
 }
 
@@ -643,6 +709,7 @@ sub check_steam_cmd_client
 
 sub is_screen_running
 {
+  logger "is_screen_running";
 	return "Bad Encryption Key" unless(decrypt_param(pop(@_)) eq "Encryption checking OK");
 	my ($screen_type, $home_id) = decrypt_params(@_);
 	return is_screen_running_without_decrypt($screen_type, $home_id);
@@ -650,6 +717,7 @@ sub is_screen_running
 
 sub is_screen_running_without_decrypt
 {
+  logger "is_screen_running_without_decrypt";
 	my ($screen_type, $home_id) = @_;
 
 	my $screen_id = create_screen_id($screen_type, $home_id);
@@ -669,6 +737,7 @@ sub is_screen_running_without_decrypt
 # Delete Server Stopped Status File:
 sub deleteStoppedStatFile
 {
+  logger "deleteStoppedStatFile";
 	my ($home_path) = @_;
 	my $server_stop_status_file = Path::Class::File->new($home_path, "SERVER_STOPPED");
 	if(-e $server_stop_status_file)
@@ -680,6 +749,7 @@ sub deleteStoppedStatFile
 # Universal startup function
 sub universal_start
 {
+  logger "universal_start";
 	chomp(@_);
 	return "Bad Encryption Key" unless(decrypt_param(pop(@_)) eq "Encryption checking OK");
 	return universal_start_without_decrypt(decrypt_params(@_));
@@ -688,6 +758,7 @@ sub universal_start
 # Split to two parts because of internal calls.
 sub universal_start_without_decrypt
 {
+  logger "universal_start_without_decrypt";
 	my (
 		$home_id, $home_path, $server_exe, $run_dir,
 		$startup_cmd, $server_port, $server_ip, $cpu, $nice, $preStart, $envVars
@@ -875,12 +946,14 @@ sub universal_start_without_decrypt
 # @return -1 in case of an error.
 sub renice_process
 {
+  logger "renice_process";
 	return "Bad Encryption Key" unless(decrypt_param(pop(@_)) eq "Encryption checking OK");
 	return renice_process_without_decrypt(decrypt_params(@_));
 }
 
 sub renice_process_without_decrypt
 {
+  logger "renice_process_without_decrypt";
 	my ($home_id, $nice) = @_;
 	if ($nice != 0)
 	{
@@ -908,11 +981,13 @@ sub renice_process_without_decrypt
 # This is used to force a process to run on a particular CPU
 sub force_cpu
 {
+  logger "force_cpu";
 	return force_cpu_without_decrypt(decrypt_params(@_));
 }
 
 sub force_cpu_without_decrypt
 {
+  logger "force_cpu_without_decrypt";
 	my ($home_id, $cpu) = @_;
 	if ($cpu ne 'NA')
 	{
@@ -940,6 +1015,7 @@ sub force_cpu_without_decrypt
 # Returns the number of CPUs available.
 sub cpu_count
 {
+  logger "cpu_count";
 	return "Bad Encryption Key" unless(decrypt_param(pop(@_)) eq "Encryption checking OK");
 	if (!-e "/proc/cpuinfo")
 	{
@@ -968,6 +1044,7 @@ sub cpu_count
 # @return 1 when file does not exist.
 sub rfile_exists
 {
+  logger "rfile_exists";
 	return "Bad Encryption Key" unless(decrypt_param(pop(@_)) eq "Encryption checking OK");
 	chdir AGENT_RUN_DIR;
 	my $checkFile = decrypt_param(@_);
@@ -991,6 +1068,7 @@ sub rfile_exists
 # @return 0 when check is ok.
 sub quick_chk
 {
+  logger "Doing a quick_chk";
 	my $dec_check = &decrypt_param(@_);
 	if ($dec_check ne 'hello')
 	{
@@ -998,6 +1076,19 @@ sub quick_chk
 		return 1;
 	}
 	return 0;
+}
+
+sub log_rpc
+{
+  my @newlist = @{my $self->{@_}};
+  logger "vvvvvvvvvv START vvvvvvvvvvv";
+  foreach (&decrypt_params(@newlist))
+  {
+    logger "PARAM " . $_;
+  }
+  logger "^^^^^^^^^^^^^^ Done ^^^^^^^^^^^^^";
+  # logger "Logged RPC params (sub) " . decrypt_params(@_);
+	# return 0;
 }
 
 ### Return -10 If home path is not found.
@@ -1008,7 +1099,10 @@ sub quick_chk
 ### Return 2;content If log found but screen is not running.
 sub get_log
 {
+  logger "get_log";
 	return "Bad Encryption Key" unless(decrypt_param(pop(@_)) eq "Encryption checking OK");
+  &log_rpc(@_);
+
 	my ($screen_type, $home_id, $home_path, $nb_of_lines, $log_file) = decrypt_params(@_);
 
 	if (!chdir $home_path)
@@ -1103,6 +1197,7 @@ sub get_log
 # stop server function
 sub stop_server
 {
+  logger "stop_server";
 	chomp(@_);
 	return "Bad Encryption Key" unless(decrypt_param(pop(@_)) eq "Encryption checking OK");
 	return stop_server_without_decrypt(decrypt_params(@_));
@@ -1113,6 +1208,7 @@ sub stop_server
 ### Return 0 on success
 sub stop_server_without_decrypt
 {
+  logger "stop_server_without_decrypt";
 	my ($home_id, $server_ip, $server_port, $control_protocol,
 		$control_password, $control_type, $home_path) = @_;
 
@@ -1252,6 +1348,7 @@ sub stop_server_without_decrypt
 ### Return 1 on success
 sub send_rcon_command
 {
+  logger "send_rcon_command";
 	return "Bad Encryption Key" unless(decrypt_param(pop(@_)) eq "Encryption checking OK");
 	my ($home_id, $server_ip, $server_port, $control_protocol,
 		$control_password, $control_type, $rconCommand) = decrypt_params(@_);
@@ -1329,6 +1426,7 @@ sub send_rcon_command
 ### @return -1 If cannot open the directory.
 sub dirlist
 {
+  logger "send_rcon_command";
 	return "Bad Encryption Key" unless(decrypt_param(pop(@_)) eq "Encryption checking OK");
 	my ($datadir) = &decrypt_param(@_);
 	logger "Asked for dirlist of $datadir directory.";
@@ -1354,6 +1452,7 @@ sub dirlist
 ### @return -2 If cannot open the directory.
 sub dirlistfm
 {
+  logger "send_rcon_command";
 	return "Bad Encryption Key" unless(decrypt_param(pop(@_)) eq "Encryption checking OK");
 	my $datadir = &decrypt_param(@_);
 
@@ -1469,6 +1568,7 @@ sub dirlistfm
 ###### Returns the contents of a text file
 sub readfile
 {
+  logger "readfile";
 	return "Bad Encryption Key" unless(decrypt_param(pop(@_)) eq "Encryption checking OK");
 	chdir AGENT_RUN_DIR;
 	my $userfile = &decrypt_param(@_);
@@ -1508,6 +1608,7 @@ sub readfile
 ### @return 0 In case of a failure
 sub writefile
 {
+  logger "writefile";
 	return "Bad Encryption Key" unless(decrypt_param(pop(@_)) eq "Encryption checking OK");
 	chdir AGENT_RUN_DIR;
 	# $writefile = file we're editing, $filedata = the contents were writing to it
@@ -1551,6 +1652,7 @@ sub writefile
 ### @return 0 In case of a failure
 sub rebootnow
 {
+  logger "rebootnow";
 	return "Bad Encryption Key" unless(decrypt_param(pop(@_)) eq "Encryption checking OK");
 	sudo_exec_without_decrypt('sleep 10s; shutdown -r now');
 	logger "Scheduled system reboot to occur in 10 seconds successfully!";
@@ -1560,8 +1662,10 @@ sub rebootnow
 # Determine the os of the agent machine.
 sub what_os
 {
+  logger "what_os";
 	return "Bad Encryption Key" unless(decrypt_param(pop(@_)) eq "Encryption checking OK");
-	logger "Asking for OS type";
+
+	logger "Asking for OS type JOSH";
 	my $which_uname = `which uname`;
 	chomp $which_uname;
 	if ($which_uname ne "")
@@ -1599,6 +1703,7 @@ sub what_os
 ### @return -3 If resources unavailable.
 sub start_file_download
 {
+  logger "start_file_download";
 	return "Bad Encryption Key" unless(decrypt_param(pop(@_)) eq "Encryption checking OK");
 	my ($url, $destination, $filename, $action, $post_script) = &decrypt_params(@_);
 	logger
@@ -1687,12 +1792,14 @@ sub start_file_download
 }
 
 sub lock_additional_files{
+  logger "lock_additional_files";
 	return "Bad Encryption Key" unless(decrypt_param(pop(@_)) eq "Encryption checking OK");
 	my ($homedir, $files, $action) = &decrypt_params(@_);
 	return lock_additional_files_logic($homedir, $files, $action);
 }
 
 sub lock_additional_files_logic{
+  logger "lock_additional_files_logic";
 	my ($homedir, $filesToLock, $action, $returnType) = @_;
 
 	logger "Locking additional files specified in the XML.";
@@ -1731,6 +1838,7 @@ sub lock_additional_files_logic{
 
 sub run_before_start_commands
 {
+  logger "run_before_start_commands";
 	#return "Bad Encryption Key" unless(decrypt_param(pop(@_)) eq "Encryption checking OK");
 	my ($server_id, $homedir, $beforestartcmd, $envVars) = @_;
 
@@ -1774,6 +1882,7 @@ sub run_before_start_commands
 }
 
 sub multiline_to_startup_comma_format{
+  logger "multiline_to_startup_comma_format";
 	my ($multiLineVar) = @_;
 	$multiLineVar =~ s/,//g; # commas are invalid anyways in bash
 	$multiLineVar =~ s/[\r]+//g;
@@ -1782,6 +1891,7 @@ sub multiline_to_startup_comma_format{
 }
 
 sub startup_comma_format_to_multiline{
+  logger "startup_comma_format_to_multiline";
 	my ($multiLineVar) = @_;
 	$multiLineVar =~ s/{OGPNEWLINE}/\n/g;
 	return $multiLineVar;
@@ -1789,6 +1899,7 @@ sub startup_comma_format_to_multiline{
 
 sub create_secure_script
 {
+  logger "create_secure_script";
 	my ($home_path, $exec_folder_path, $exec_path) = @_;
 	secure_path_without_decrypt('chattr-i', $home_path);
 	my $secure = "$home_path/secure.sh";
@@ -1811,6 +1922,7 @@ sub create_secure_script
 
 sub check_b4_chdir
 {
+  logger "check_b4_chdir";
 	my ( $path ) = @_;
 
 	my $uid = `id -u`;
