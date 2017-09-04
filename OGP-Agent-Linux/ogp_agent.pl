@@ -370,7 +370,7 @@ my $d = Frontier::Daemon::Forking->new(
 				 rebootnow						=> \&rebootnow,
 				 what_os					  	=> \&what_os,
 				 start_file_download		  	=> \&start_file_download,
-				 lock_additional_files          => \&lock_additional_files,
+				 lock_additional_files          => \&mocked_lock_additional_files,
 				 is_file_download_in_progress 	=> \&is_file_download_in_progress,
 				 uncompress_file			  	=> \&uncompress_file,
 				 discover_ips					=> \&discover_ips,
@@ -1791,49 +1791,10 @@ sub start_file_download
 	}
 }
 
-sub lock_additional_files{
-  logger "lock_additional_files";
+sub mocked_lock_additional_files{
+  logger "MOCKED lock_additional_files";
 	return "Bad Encryption Key" unless(decrypt_param(pop(@_)) eq "Encryption checking OK");
-	my ($homedir, $files, $action) = &decrypt_params(@_);
-	return lock_additional_files_logic($homedir, $files, $action);
-}
-
-sub lock_additional_files_logic{
-  logger "lock_additional_files_logic";
-	my ($homedir, $filesToLock, $action, $returnType) = @_;
-
-	logger "Locking additional files specified in the XML.";
-
-	my $commandStr = "";
-	$filesToLock = startup_comma_format_to_multiline($filesToLock);
-	$filesToLock = replace_OGP_Env_Vars("", $homedir, $filesToLock);
-	my @filesToProcess = split /[\r\n]+/, $filesToLock;
-	foreach my $line (@filesToProcess) {
-		my $fullPath = $homedir . "/" . $line;
-		if($action eq "lock"){
-			if(defined $returnType && $returnType eq "str"){
-				$commandStr .= "echo '".$SUDOPASSWD."' | sudo -S -p \"\" sh -c \"" . secure_path_without_decrypt("chattr+i", $fullPath, $returnType) . "\" > /dev/null 2>&1" . "\n";
-				$commandStr .= "echo '".$SUDOPASSWD."' | sudo -S -p \"\" sh -c \"" . secure_path_without_decrypt("chattr+i", $line, $returnType) . "\" > /dev/null 2>&1" . "\n";
-			}else{
-				secure_path_without_decrypt("chattr+i", $fullPath);
-				secure_path_without_decrypt("chattr+i", $line);
-			}
-		}else{
-			if(defined $returnType && $returnType eq "str"){
-				$commandStr .= "echo '".$SUDOPASSWD."' | sudo -S -p \"\" sh -c \"" . secure_path_without_decrypt("chattr-i", $fullPath, $returnType) . "\" > /dev/null 2>&1" . "\n";
-				$commandStr .= "echo '".$SUDOPASSWD."' | sudo -S -p \"\" sh -c \"" . secure_path_without_decrypt("chattr-i", $line, $returnType) . "\" > /dev/null 2>&1" . "\n";
-			}else{
-				secure_path_without_decrypt("chattr-i", $fullPath);
-				secure_path_without_decrypt("chattr-i", $line);
-			}
-		}
-	}
-
-	if($commandStr ne ""){
-		return $commandStr;
-	}
-
-	return "";
+	return ""
 }
 
 sub run_before_start_commands
@@ -2052,9 +2013,9 @@ sub start_rsync_install
 
 	my $log_file = Path::Class::File->new(SCREEN_LOGS_DIR, "screenlog.$screen_id");
 
-	if(defined $filesToLockUnlock && $filesToLockUnlock ne ""){
-		$postcmd .= "\n" . lock_additional_files_logic($home_path, $filesToLockUnlock, "lock", "str");
-	}
+	# if(defined $filesToLockUnlock && $filesToLockUnlock ne ""){
+	# 	$postcmd .= "\n" . lock_additional_files_logic($home_path, $filesToLockUnlock, "lock", "str");
+	# }
 
 	backup_home_log( $home_id, $log_file );
 	my $path	= $home_path;
@@ -2222,9 +2183,9 @@ sub steam_cmd_without_decrypt
 
 	my $postcmd_mod = $postcmd;
 
-	if(defined $filesToLockUnlock && $filesToLockUnlock ne ""){
-		$postcmd_mod .= "\n" . lock_additional_files_logic($home_path, $filesToLockUnlock, "lock", "str");
-	}
+	# if(defined $filesToLockUnlock && $filesToLockUnlock ne ""){
+	# 	$postcmd_mod .= "\n" . lock_additional_files_logic($home_path, $filesToLockUnlock, "lock", "str");
+	# }
 
 	my @installcmds = ("$steam_binary +runscript $installtxt +exit");
 
