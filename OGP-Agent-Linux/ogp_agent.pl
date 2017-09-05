@@ -65,6 +65,7 @@ use constant AGENT_PID_FILE =>
   Path::Class::File->new(AGENT_RUN_DIR, 'ogp_agent.pid');
 use constant STEAM_LICENSE_OK => "Accept";
 use constant STEAM_LICENSE	=> $Cfg::Config{steam_license};
+use constant GAME_DIR => $Cfg::Config{game_dir};
 use constant MANUAL_TMP_DIR   => Path::Class::Dir->new(AGENT_RUN_DIR, 'tmp');
 use constant STEAMCMD_CLIENT_DIR => Path::Class::Dir->new(AGENT_RUN_DIR, 'steamcmd');
 use constant STEAMCMD_CLIENT_BIN =>
@@ -322,7 +323,7 @@ my $d = Frontier::Daemon::Forking->new(
 				 master_server_update			=> \&master_server_update,
 				 secure_path					=> \&secure_path,
 				 get_chattr						=> \&get_chattr,
-				 ftp_mgr						=> \&ftp_mgr,
+				 ftp_mgr						=> \&mock_ftp_mgr,
 				 compress_files					=> \&compress_files,
 				 stop_fastdl					=> \&stop_fastdl,
 				 restart_fastdl					=> \&restart_fastdl,
@@ -657,18 +658,31 @@ sub is_screen_running_without_decrypt
   logger "is_screen_running_without_decrypt";
 	my ($screen_type, $home_id) = @_;
 
-	my $screen_id = create_screen_id($screen_type, $home_id);
+	# my $screen_id = create_screen_id($screen_type, $home_id);
+  # return 1;
+# TODO: docker service inspect --format='{{.Spec.Mode.Replicated.Replicas}}' 2_gmod
 
-	my $is_running = `screen -list | grep $screen_id`;
 
-	if ($is_running =~ /^\s*$/)
-	{
-		return 0;
-	}
-	else
-	{
-		return 1;
-	}
+  #TODO: Is service found in docker service ls || grep 'NAME'
+  #TODO: Then check if it is replicated...
+  my $service_name = $home_id . '_game';
+  logger '$service_name ' .  $service_name
+
+  my $docker_service = `sudo docker service ls --format='{{.Name}}' | grep -oh '$service_name' | wc -w`;
+
+  logger 'docker_service_cmd' . $docker_service;
+
+  # my $docker_replicas = sudo_exec_without_decrypt($docker_service_cmd);
+
+  if ($docker_service > 0) {
+    logger 'Service running ' . $docker_service;
+    return 1;
+  }
+  else
+  {
+    logger 'Service is not up ' . $docker_service;
+    return 0;
+  }
 }
 
 # Delete Server Stopped Status File:
@@ -704,21 +718,33 @@ sub universal_start_without_decrypt
 	# Replace any {OGP_HOME_DIR} in the $start_cmd with the server's home directory path
 	$startup_cmd = replace_OGP_Env_Vars($home_id, $home_path, $startup_cmd);
 
+  logger "=================================";
+  logger "HOME_id $home_id";
+  logger "home_path $home_path";
+  logger "startup command: $startup_cmd";
+  logger "=================================";
+
+  my $game_instance_dir = GAME_DIR . '/' . $home_id;
+  logger "game_instance_dir   $game_instance_dir";
+
 	if (is_screen_running_without_decrypt(SCREEN_TYPE_HOME, $home_id) == 1)
 	{
 		logger "This server is already running (ID: $home_id).";
 		return -14;
 	}
 
-	# if (!-e $home_path)
-	# {
-	# 	logger "Can't find server's install path [ $home_path ].";
-	# 	return -10;
-	# }
+  my $mkdir_cmd='mkdir -p ' . $game_instance_dir;
+  sudo_exec_without_decrypt($mkdir_cmd);
 
+  #Till we have complate
+  sudo_exec_without_decrypt('cp /opt/OGP/docker-compose.gmod.yml ' . $game_instance_dir);
 
-  sudo_exec_without_decrypt('docker stack deploy -c "docker-compose.gmod.yml" gmod');
+  my $docker_run_command = 'docker stack deploy -c ' . $game_instance_dir . '/docker-compose.gmod.yml ' . $home_id;
+  logger 'docker command: ' . $docker_run_command;
+  sudo_exec_without_decrypt($docker_run_command);
   return 1;
+
+  #TODO: make this all better once we add gomplate and such
 
 	my $uid = `id -u`;
 	chomp $uid;
@@ -988,9 +1014,24 @@ sub rfile_exists
   logger "rfile_exists";
 	return "Bad Encryption Key" unless(decrypt_param(pop(@_)) eq "Encryption checking OK");
 
-  return 0;
 	chdir AGENT_RUN_DIR;
 	my $checkFile = decrypt_param(@_);
+
+  # Speacial handling for 'startup' which is used to know if a service has been started
+  # This may not be needed...
+  if (index($checkFile, 'startups') != -1) {
+     logger 'Its a health check, say its down!';
+     return 1;
+     #my $docker_replicas = `sudo docker service inspect --format='{{.Spec.Mode.Replicated.Replicas}}' $service_name`;
+  }
+  else
+  {
+    return 0;
+  }
+
+
+
+# docker service ls --format "{{.PORTS}}"
 
 	if (-e $checkFile)
 	{
@@ -2726,354 +2767,11 @@ sub get_chattr
 	return sudo_exec_without_decrypt('(lsattr \''.$file_path.'\' | sed -e "s#'.$file.'##g")|grep -o i');
 }
 
-sub ftp_mgr
+sub mock_ftp_mgr
 {
+  logger "Mocked ftp_mgr";
 	return "Bad Encryption Key" unless(decrypt_param(pop(@_)) eq "Encryption checking OK");
-	my ($action, $login, $password, $home_path) = decrypt_params(@_);
 
-	my $uid = `id -u`;
-	chomp $uid;
-	my $gid = `id -g`;
-	chomp $gid;
-
-	$login =~ s/('+)/'\"$1\"'/g;
-	$password =~ s/('+)/'\"$1\"'/g;
-	$home_path =~ s/('+)/'\"$1\"'/g;
-
-	if(!defined($Cfg::Preferences{ogp_manages_ftp}) || (defined($Cfg::Preferences{ogp_manages_ftp}) &&  $Cfg::Preferences{ogp_manages_ftp} eq "1")){
-		if( defined($Cfg::Preferences{ftp_method}) && $Cfg::Preferences{ftp_method} eq "IspConfig")
-		{
-			use constant ISPCONFIG_DIR => Path::Class::Dir->new(AGENT_RUN_DIR, 'IspConfig');
-			use constant FTP_USERS_DIR => Path::Class::Dir->new(ISPCONFIG_DIR, 'ftp_users');
-
-			if (!-d FTP_USERS_DIR && !mkdir FTP_USERS_DIR)
-			{
-				print "Could not create " . FTP_USERS_DIR . " directory $!.";
-				return -1;
-			}
-
-			chdir ISPCONFIG_DIR;
-
-			if($action eq "list")
-			{
-				my $users_list;
-				opendir(USERS, FTP_USERS_DIR);
-				while (my $username = readdir(USERS))
-				{
-					# Skip . and ..
-					next if $username =~ /^\./;
-					$users_list .= `php-cgi -f sites_ftp_user_get.php username=\'$username\'`;
-				}
-				closedir(USERS);
-				if( defined($users_list) )
-				{
-					return "1;".encode_list($users_list);
-				}
-			}
-			elsif($action eq "userdel")
-			{
-				return "1;".encode_list(`php-cgi -f sites_ftp_user_delete.php username=\'$login\'`);
-			}
-			elsif($action eq "useradd")
-			{
-				return "1;".encode_list(`php-cgi -f sites_ftp_user_add.php username=\'$login\' password=\'$password\' dir=\'$home_path\' uid=$uid gid=$gid`);
-			}
-			elsif($action eq "passwd")
-			{
-				return "1;".encode_list(`php-cgi -f sites_ftp_user_update.php type=passwd username=\'$login\' password=\'$password\'`);
-			}
-			elsif($action eq "show")
-			{
-				return "1;".encode_list(`php-cgi -f sites_ftp_user_get.php type=detail username=\'$login\'`);
-			}
-			elsif($action eq "usermod")
-			{
-				return "1;".encode_list(`php-cgi -f sites_ftp_user_update.php username=\'$login\' password=\'$password\'`);
-			}
-		}
-		elsif(defined($Cfg::Preferences{ftp_method}) && $Cfg::Preferences{ftp_method} eq "EHCP" && -e "/etc/init.d/ehcp")
-		{
-			use constant EHCP_DIR => Path::Class::Dir->new(AGENT_RUN_DIR, 'EHCP');
-
-			chdir EHCP_DIR;
-			my $phpScript;
-			my $phpOut;
-
-			chmod 0777, 'ehcp_ftp_log.txt';
-
-			# In order to access the FTP files, the vsftpd user needs to be added to the ogp group
-			sudo_exec_without_decrypt("usermod -a -G '$gid' ftp");
-			sudo_exec_without_decrypt("usermod -a -G '$gid' vsftpd");
-
-			if($action eq "list")
-			{
-				return "1;".encode_list(`php-cgi -f listAllUsers.php`);
-			}
-			elsif($action eq "userdel")
-			{
-				$phpScript = `php-cgi -f delAccount.php username=\'$login\'`;
-				$phpOut = `php-cgi -f syncftp.php`;
-				return $phpScript;
-			}
-			elsif($action eq "useradd")
-			{
-				$phpScript = `php-cgi -f addAccount.php username=\'$login\' password=\'$password\' dir=\'$home_path\' uid=$uid gid=$gid`;
-				$phpOut = `php-cgi -f syncftp.php`;
-				return $phpScript;
-			}
-			elsif($action eq "passwd")
-			{
-				$phpScript = `php-cgi -f updatePass.php username=\'$login\' password=\'$password\'`;
-				$phpOut = `php-cgi -f syncftp.php`;
-				return $phpScript ;
-			}
-			elsif($action eq "show")
-			{
-				return "1;".encode_list(`php-cgi -f showAccount.php username=\'$login\'`);
-			}
-			elsif($action eq "usermod")
-			{
-				$phpScript = `php-cgi -f updateInfo.php username=\'$login\' password=\'$password\'`;
-				$phpOut = `php-cgi -f syncftp.php`;
-				return $phpScript;
-			}
-		}
-		elsif(defined($Cfg::Preferences{ftp_method}) && $Cfg::Preferences{ftp_method} eq "proftpd" && -e $Cfg::Preferences{proftpd_conf_path})
-		{
-			chdir $Cfg::Preferences{proftpd_conf_path};
-			if($action eq "list")
-			{
-				my $users;
-				open(PASSWD, 'ftpd.passwd');
-				while (<PASSWD>) {
-					chomp;
-					my($login, $passwd, $uid, $gid, $gcos, $home, $shell) = split(/:/);
-					$users .= "$login\t$home\n";
-				}
-				close(PASSWD);
-				return "1;".encode_list($users);
-			}
-			elsif($action eq "userdel")
-			{
-				return sudo_exec_without_decrypt("ftpasswd --passwd --delete-user --name='$login'");
-			}
-			elsif($action eq "useradd")
-			{
-				return sudo_exec_without_decrypt("echo '$password' | ftpasswd --passwd --name='$login' --home='$home_path' --shell=/bin/false --uid=$uid --gid=$gid --stdin");
-			}
-			elsif($action eq "passwd")
-			{
-				return sudo_exec_without_decrypt("echo '$password' | ftpasswd --passwd --change-password --name='$login' --stdin");
-			}
-			elsif($action eq "show")
-			{
-				return 1;
-			}
-			elsif($action eq "usermod")
-			{
-				return 1;
-			}
-			chdir AGENT_RUN_DIR;
-		}
-		else
-		{
-			if($action eq "list")
-			{
-				return sudo_exec_without_decrypt("pure-pw list");
-			}
-			elsif($action eq "userdel")
-			{
-				return sudo_exec_without_decrypt("pure-pw userdel '$login' && pure-pw mkdb");
-			}
-			elsif($action eq "useradd")
-			{
-				return sudo_exec_without_decrypt("(echo '$password'; echo '$password') | pure-pw useradd '$login' -u $uid -g $gid -d '$home_path' && pure-pw mkdb");
-			}
-			elsif($action eq "passwd")
-			{
-				return sudo_exec_without_decrypt("(echo '$password'; echo '$password') | pure-pw passwd '$login' && pure-pw mkdb");
-			}
-			elsif($action eq "show")
-			{
-				return sudo_exec_without_decrypt("pure-pw show '$login'");
-			}
-			elsif($action eq "usermod")
-			{
-				my $update_account = "pure-pw usermod '$login' -u $uid -g $gid";
-
-				my @account_settings = split /[\n]+/, $password;
-
-				foreach my $setting (@account_settings) {
-					my ($key, $value) = split /[\t]+/, $setting;
-
-					if( $key eq 'Directory' )
-					{
-						$value =~ s/('+)/'\"$1\"'/g;
-						$update_account .= " -d '$value'";
-					}
-
-					if( $key eq 'Full_name' )
-					{
-						if(  $value ne "" )
-						{
-							$value =~ s/('+)/'\"$1\"'/g;
-							$update_account .= " -c '$value'";
-						}
-						else
-						{
-							$update_account .= ' -c ""';
-						}
-					}
-
-					if( $key eq 'Download_bandwidth' && $value ne ""  )
-					{
-						my $Download_bandwidth;
-						if($value eq 0)
-						{
-							$Download_bandwidth = "\"\"";
-						}
-						else
-						{
-							$Download_bandwidth = $value;
-						}
-						$update_account .= " -t " . $Download_bandwidth;
-					}
-
-					if( $key eq 'Upload___bandwidth' && $value ne "" )
-					{
-						my $Upload___bandwidth;
-						if($value eq 0)
-						{
-							$Upload___bandwidth = "\"\"";
-						}
-						else
-						{
-							$Upload___bandwidth = $value;
-						}
-						$update_account .= " -T " . $Upload___bandwidth;
-					}
-
-					if( $key eq 'Max_files' )
-					{
-						if( $value eq "0" )
-						{
-							$update_account .= ' -n ""';
-						}
-						elsif( $value ne "" )
-						{
-							$update_account .= " -n " . $value;
-						}
-						else
-						{
-							$update_account .= ' -n ""';
-						}
-					}
-
-					if( $key eq 'Max_size' )
-					{
-						if( $value ne "" && $value ne "0" )
-						{
-							$update_account .= " -N " . $value;
-						}
-						else
-						{
-							$update_account .= ' -N ""';
-						}
-					}
-
-					if( $key eq 'Ratio' && $value ne ""  )
-					{
-						my($upload_ratio,$download_ratio) = split/:/,$value;
-
-						if($upload_ratio eq "0")
-						{
-							$upload_ratio = "\"\"";
-						}
-						$update_account .= " -q " . $upload_ratio;
-
-						if($download_ratio eq "0")
-						{
-							$download_ratio = "\"\"";
-						}
-						$update_account .= " -Q " . $download_ratio;
-					}
-
-					if( $key eq 'Allowed_client_IPs' )
-					{
-						if( $value ne "" )
-						{
-							$update_account .= " -r " . $value;
-						}
-						else
-						{
-							$update_account .= ' -r ""';
-						}
-					}
-
-					if( $key eq 'Denied__client_IPs' )
-					{
-						if( $value ne "" )
-						{
-							$update_account .= " -R " . $value;
-						}
-						else
-						{
-							$update_account .= ' -R ""';
-						}
-					}
-
-					if( $key eq 'Allowed_local__IPs' )
-					{
-						if( $value ne "" )
-						{
-							$update_account .= " -i " . $value;
-						}
-						else
-						{
-							$update_account .= ' -i ""';
-						}
-					}
-
-					if( $key eq 'Denied__local__IPs' )
-					{
-						if( $value ne "" )
-						{
-							$update_account .= " -I " . $value;
-						}
-						else
-						{
-							$update_account .= ' -I ""';
-						}
-					}
-
-
-					if( $key eq 'Max_sim_sessions' && $value ne "" )
-					{
-						$update_account .= " -y " . $value;
-					}
-
-					if ( $key eq 'Time_restrictions'  )
-					{
-						if( $value eq "0000-0000")
-						{
-							$update_account .= ' -z ""';
-						}
-						elsif( $value ne "" )
-						{
-							$update_account .= " -z " . $value;
-						}
-						else
-						{
-							$update_account .= ' -z ""';
-						}
-					}
-				}
-				$update_account .=" && pure-pw mkdb";
-				# print $update_account;
-				return sudo_exec_without_decrypt($update_account);
-			}
-		}
-	}
 	return 0;
 }
 

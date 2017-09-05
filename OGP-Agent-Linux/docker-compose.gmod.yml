@@ -1,6 +1,6 @@
 version: '3.1'
 services:
-  gmod:
+  game:
     image: joshhsoj1902/gmod-docker:latest
     ports:
       - "27015:27015/tcp"
