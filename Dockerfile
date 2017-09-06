@@ -31,5 +31,3 @@ COPY OGP-Agent-Linux /opt/agent
 RUN cd /opt/agent && cp -avf systemd Crypt EHCP FastDownload File Frontier IspConfig KKrcon php-query Schedule Time ogp_agent.pl ogp_screenrc ogp_agent_run docker-compose.gmod.yml agent_conf.sh extPatterns.txt /opt/OGP/
 
 RUN chown --preserve-root -R ogp_agent /opt/OGP/
-
-COPY scripts /opt/scripts
