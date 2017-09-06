@@ -1138,6 +1138,12 @@ sub stop_server_without_decrypt
 	my ($home_id, $server_ip, $server_port, $control_protocol,
 		$control_password, $control_type, $home_path) = @_;
 
+
+  my $docker_run_command = 'docker stack rm ' . $home_id;
+  logger 'docker command: ' . $docker_run_command;
+  sudo_exec_without_decrypt($docker_run_command);
+  return 0;
+
 	my $startup_file = Path::Class::File->new(GAME_STARTUP_DIR, "$server_ip-$server_port");
 
 	if (-e $startup_file)
