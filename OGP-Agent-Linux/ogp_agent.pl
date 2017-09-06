@@ -1232,6 +1232,10 @@ sub dirlist
 	my ($datadir) = &decrypt_param(@_);
 	logger "Asked for dirlist of $datadir directory.";
   return "foo;bar";
+
+
+
+
 	if (!-d $datadir)
 	{
 		logger "ERROR - Directory [ $datadir ] not found!";
@@ -1259,6 +1263,8 @@ sub dirlistfm
 	my $datadir = &decrypt_param(@_);
 
 	logger "Asked for dirlist of $datadir directory.";
+
+  return 1;
 
 	if (!-d $datadir)
 	{
@@ -1374,6 +1380,8 @@ sub readfile
 	return "Bad Encryption Key" unless(decrypt_param(pop(@_)) eq "Encryption checking OK");
 	chdir AGENT_RUN_DIR;
 	my $userfile = &decrypt_param(@_);
+
+  return "1; ";
 
 	unless ( -e $userfile )
 	{
