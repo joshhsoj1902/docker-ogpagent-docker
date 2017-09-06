@@ -1081,62 +1081,6 @@ sub get_log
 
 	my ($screen_type, $home_id, $home_path, $nb_of_lines, $log_file) = decrypt_params(@_);
 
-	# if (!chdir $home_path)
-	# {
-	# 	logger "Can't change to server's install path [ $home_path ].";
-	# 	return -10;
-	# }
-  #
-	# if (   ($screen_type eq SCREEN_TYPE_UPDATE)
-	# 	&& ($screen_type eq SCREEN_TYPE_HOME))
-	# {
-	# 	logger "Invalid screen type '$screen_type'.";
-	# 	return -9;
-	# }
-
-	# if(!$log_file)
-	# {
-	# 	my $screen_id = create_screen_id($screen_type, $home_id);
-	# 	$log_file = Path::Class::File->new(SCREEN_LOGS_DIR, "screenlog.$screen_id");
-	# }
-	# else
-	# {
-	# 	$log_file = Path::Class::File->new($home_path, $log_file);
-	# }
-  #
-	# chmod 0644, $log_file;
-
-	# Create local copy of current log file if SCREEN_LOG_LOCAL = 1
-	# if(SCREEN_LOG_LOCAL == 1)
-	# {
-	# 	my $log_local = Path::Class::File->new($home_path, "LOG_$screen_type.txt");
-	# 	if ( -e $log_local )
-	# 	{
-	# 		unlink $log_local;
-	# 	}
-  #
-	# 	# Copy log file only if it's not an UPDATE type as it may contain steam credentials
-	# 	if($screen_type eq SCREEN_TYPE_HOME){
-	# 		copy($log_file, $log_local);
-	# 	}
-	# }
-
-	# # Regenerate the log file if it doesn't exist
-	# unless ( -e $log_file )
-	# {
-	# 	if (open(NEWLOG, '>', $log_file))
-	# 	{
-	# 		logger "Log file missing, regenerating: " . $log_file;
-	# 		print NEWLOG "Log file missing, started new log\n";
-	# 		close(NEWLOG);
-	# 	}
-	# 	else
-	# 	{
-	# 		logger "Cannot regenerate log file in " . $log_file . " : $!";
-	# 		return -8;
-	# 	}
-	# }
-
   my $service_name = $home_id . '_game';
   logger '$service_name ' .  $service_name;
 
@@ -1173,15 +1117,7 @@ sub get_log
 	}
 
 	my $encoded_content = encode_list(@modedlines);
-	chdir AGENT_RUN_DIR;
-	if(is_screen_running_without_decrypt($screen_type, $home_id) == 1)
-	{
-		return "1;" . $encoded_content;
-	}
-	else
-	{
-		return "2;" . $encoded_content;
-	}
+  return "1;" . $encoded_content;
 }
 
 # stop server function
