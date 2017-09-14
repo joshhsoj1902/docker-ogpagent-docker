@@ -714,7 +714,18 @@ sub universal_start_without_decrypt
   logger "=================================";
   logger "HOME_id $home_id";
   logger "home_path $home_path";
+  logger "server_exe $server_exe";
+  logger "run_dir $run_dir";
   logger "startup command: $startup_cmd";
+
+  logger "server_port $server_port";
+  logger "server_ip $server_ip";
+  logger "cpu $cpu";
+  logger "nice $nice";
+  logger "preStart $preStart";
+  logger "envVars $envVars";
+
+
   logger "=================================";
 
   my $game_instance_dir = GAME_DIR . '/' . $home_id;
@@ -726,11 +737,7 @@ sub universal_start_without_decrypt
 		return -14;
 	}
 
-  my $mkdir_cmd='mkdir -p ' . $game_instance_dir;
-  sudo_exec_without_decrypt($mkdir_cmd);
-
-  #Till we have complate
-  sudo_exec_without_decrypt('cp /opt/OGP/docker-compose.gmod.yml ' . $game_instance_dir);
+  start_docker_install($home_id);
 
   my $docker_run_command = 'docker stack deploy -c ' . $game_instance_dir . '/docker-compose.gmod.yml ' . $home_id;
   logger 'docker command: ' . $docker_run_command;
@@ -1653,6 +1660,8 @@ sub create_bash_scripts
 ### @return 0 In error case.
 sub start_rsync_install
 {
+  #TODO: This function should create the directory and copy the base docker-compose file into Place
+
 	return "Bad Encryption Key" unless(decrypt_param(pop(@_)) eq "Encryption checking OK");
 	my ($home_id, $home_path, $url, $exec_folder_path, $exec_path, $precmd, $postcmd, $filesToLockUnlock) = decrypt_params(@_);
 
@@ -1660,6 +1669,20 @@ sub start_rsync_install
 	{
 		return 0;
 	}
+
+
+  logger "=================================";
+  logger "HOME_id $home_id";
+  logger "home_path $home_path";
+  logger "=================================";
+
+  start_docker_install($home_id);
+
+
+  return 1;
+
+
+
 
 	secure_path_without_decrypt('chattr-i', $home_path);
 
@@ -1705,6 +1728,42 @@ sub start_rsync_install
 	chdir AGENT_RUN_DIR;
 	return 1;
 }
+
+
+
+
+
+
+#### Run the rsync update ####
+### @return 1 If update started
+### @return 0 In error case.
+sub start_docker_install
+{
+  #TODO: This function should create the directory and copy the base docker-compose file into Place
+
+	my ($home_id) = @_;
+
+  logger "=================================";
+  logger "HOME_id $home_id";
+  logger "=================================";
+
+  my $game_instance_dir = GAME_DIR . '/' . $home_id;
+  logger "game_instance_dir   $game_instance_dir";
+
+  my $mkdir_cmd='mkdir -p ' . $game_instance_dir;
+  sudo_exec_without_decrypt($mkdir_cmd);
+
+  #Till we have complate
+  sudo_exec_without_decrypt('cp /opt/OGP/docker-compose.gmod.yml ' . $game_instance_dir);
+
+  return 1
+}
+
+
+
+
+
+
 
 ### @return PID of the download process if started succesfully.
 ### @return -1 If could not create temporary download directory.
