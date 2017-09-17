@@ -737,7 +737,11 @@ sub universal_start_without_decrypt
 		return -14;
 	}
 
-  start_docker_install($home_id);
+  #The game isn't installed yet on first launch meaning the config file isn't set up
+  if (not -d $game_instance_dir) {
+    start_docker_install($home_id);
+    return 0;
+  }
 
   my $docker_run_command = 'docker stack deploy -c ' . $game_instance_dir . '/docker-compose.gmod.yml ' . $home_id;
   logger 'docker command: ' . $docker_run_command;
@@ -1274,6 +1278,19 @@ sub dirlistfm
   return 1;
 }
 
+sub map_filepath
+{
+  my ($filepath) = @_;
+  logger "Mapping filepath ". $filepath;
+  my $find    = '/home/ogp_agent/OGP_User_Files/';
+  my $replace = GAME_DIR;
+
+  $filepath =~ s/$find/$replace/g;
+  logger "Mapped filepath ". $filepath;
+  return $filepath;
+}
+
+
 ###### Returns the contents of a text file
 sub readfile
 {
@@ -1282,7 +1299,41 @@ sub readfile
 	chdir AGENT_RUN_DIR;
 	my $userfile = &decrypt_param(@_);
 
-  return "1; ";
+  $userfile = map_filepath($userfile);
+
+	unless ( -e $userfile )
+	{
+		if (open(BLANK, '>', $userfile))
+		{
+			close(BLANK);
+		}
+	}
+
+	if (!open(USERFILE, '<', $userfile))
+	{
+		logger "ERROR - Can't open file $userfile for reading.";
+		return -1;
+	}
+
+	my ($wholefile, $buf);
+
+	while (read(USERFILE, $buf, 60 * 57))
+	{
+		$wholefile .= encode_base64($buf);
+	}
+	close(USERFILE);
+
+	if(!defined $wholefile)
+	{
+		return "1; ";
+	}
+
+	return "1;" . $wholefile;
+
+
+
+
+
 }
 
 ###### Backs up file, then writes data to new file
@@ -1295,6 +1346,19 @@ sub writefile
 	chdir AGENT_RUN_DIR;
 	# $writefile = file we're editing, $filedata = the contents were writing to it
 	my ($writefile, $filedata) = &decrypt_params(@_);
+  $writefile = map_filepath($writefile);
+
+  my 	$filedata2 = decode_base64($filedata);
+  $filedata2 =~ s/\r//g;
+  logger "vvvvvvvvvvvvvvvvvvvvvvvv";
+  logger "writefile $writefile";
+  logger "filedata $filedata";
+  logger "filedata2 $filedata2";
+  logger "^^^^^^^^^^^^^^^^^^^^^^^^^";
+
+  sudo_exec_without_decrypt('touch $writefile');
+# return 1;
+
 	if (!-e $writefile)
 	{
 		open FILE, ">", $writefile;
@@ -1747,16 +1811,30 @@ sub start_docker_install
   logger "HOME_id $home_id";
   logger "=================================";
 
-  my $game_instance_dir = GAME_DIR . '/' . $home_id;
-  logger "game_instance_dir   $game_instance_dir";
+  my $game_instance_dir = get_game_instance_dir($home_id);
 
+  #TODO: all this sudo is crazy :(
   my $mkdir_cmd='mkdir -p ' . $game_instance_dir;
   sudo_exec_without_decrypt($mkdir_cmd);
 
-  #Till we have complate
+  my $touch_cmd='touch ' . $game_instance_dir . '/config.yml';
+  sudo_exec_without_decrypt($touch_cmd);
+
+  my $chmod_cmd='chmod 777 -R ' . $game_instance_dir;
+  sudo_exec_without_decrypt($chmod_cmd);
+
+  #Till we have gomplate
   sudo_exec_without_decrypt('cp /opt/OGP/docker-compose.gmod.yml ' . $game_instance_dir);
 
   return 1
+}
+
+sub get_game_instance_dir
+{
+  my ($home_id) = @_;
+  my $game_instance_dir = GAME_DIR . '/' . $home_id;
+  return $game_instance_dir
+
 }
 
 
