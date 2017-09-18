@@ -690,6 +690,29 @@ sub deleteStoppedStatFile
 	}
 }
 
+
+sub gomplate_compose
+{
+  my ($game_instance_dir) = @_;
+
+  my $gomplate = '/usr/local/bin/gomplate';
+  my $datasource = 'config=file://' . $game_instance_dir . '/docker-config.yml';
+  my $template = '/opt/OGP/templates/docker-compose.tmpl';
+  my $output = $game_instance_dir . '/docker-compose.yml';
+
+  my $gomplate_cmd = $gomplate . ' -d ' . $datasource . ' -f ' . $template . ' -o ' . $output;
+
+  logger 'The gomplate command: ' . $gomplate_cmd;
+
+  sudo_exec_without_decrypt($gomplate_cmd);
+
+  my $append_env_cmd = 'cat ' . $game_instance_dir . '/docker-environment.yml >> ' . $output;
+
+  sudo_exec_without_decrypt($append_env_cmd);
+
+  return 1;
+}
+
 # Universal startup function
 sub universal_start
 {
@@ -743,7 +766,9 @@ sub universal_start_without_decrypt
     return 0;
   }
 
-  my $docker_run_command = 'docker stack deploy -c ' . $game_instance_dir . '/docker-compose.gmod.yml ' . $home_id;
+  gomplate_compose($game_instance_dir);
+
+  my $docker_run_command = 'docker stack deploy -c ' . $game_instance_dir . '/docker-compose.yml ' . $home_id;
   logger 'docker command: ' . $docker_run_command;
   sudo_exec_without_decrypt($docker_run_command);
   return 1;
@@ -1299,6 +1324,8 @@ sub readfile
 	chdir AGENT_RUN_DIR;
 	my $userfile = &decrypt_param(@_);
 
+  return "1; ";
+
   $userfile = map_filepath($userfile);
 
 	unless ( -e $userfile )
@@ -1317,6 +1344,8 @@ sub readfile
 
 	my ($wholefile, $buf);
 
+  logger "Starting to read";
+
 	while (read(USERFILE, $buf, 60 * 57))
 	{
 		$wholefile .= encode_base64($buf);
@@ -1325,10 +1354,15 @@ sub readfile
 
 	if(!defined $wholefile)
 	{
+    logger "File isn't defined";
 		return "1; ";
 	}
 
-	return "1;" . $wholefile;
+  logger "The wholefile: " . $wholefile;
+  logger "The buf: " . $buf;
+  logger "The encoded space: " . encode_base64('');
+
+	return "1; " . $wholefile;
 
 
 
@@ -1356,9 +1390,6 @@ sub writefile
   logger "filedata2 $filedata2";
   logger "^^^^^^^^^^^^^^^^^^^^^^^^^";
 
-  sudo_exec_without_decrypt('touch $writefile');
-# return 1;
-
 	if (!-e $writefile)
 	{
 		open FILE, ">", $writefile;
@@ -1385,6 +1416,11 @@ sub writefile
 		logger "ERROR - Failed to open $writefile for writing.";
 		return 0;
 	}
+
+  # Always clear out the file before writing the new one
+  my $trunc_file = 'truncate -s 0 ' . $writefile;
+  sudo_exec_without_decrypt($trunc_file);
+
 	$filedata = decode_base64($filedata);
 	$filedata =~ s/\r//g;
 	print WRITER "$filedata";
@@ -1798,9 +1834,7 @@ sub start_rsync_install
 
 
 
-#### Run the rsync update ####
-### @return 1 If update started
-### @return 0 In error case.
+
 sub start_docker_install
 {
   #TODO: This function should create the directory and copy the base docker-compose file into Place
@@ -1817,7 +1851,13 @@ sub start_docker_install
   my $mkdir_cmd='mkdir -p ' . $game_instance_dir;
   sudo_exec_without_decrypt($mkdir_cmd);
 
-  my $touch_cmd='touch ' . $game_instance_dir . '/config.yml';
+  my $touch_cmd='touch ' . $game_instance_dir . '/docker-environment.yml';
+  sudo_exec_without_decrypt($touch_cmd);
+
+  $touch_cmd='touch ' . $game_instance_dir . '/docker-config.yml';
+  sudo_exec_without_decrypt($touch_cmd);
+
+  $touch_cmd='touch ' . $game_instance_dir . '/docker-test.yml';
   sudo_exec_without_decrypt($touch_cmd);
 
   my $chmod_cmd='chmod 777 -R ' . $game_instance_dir;
@@ -2360,7 +2400,7 @@ sub discover_ips
 		return "";
 	}
 
-	my $iplist = "";
+	my $iplist = "0.0.0.0";
 	my $ipfound;
 	my $junk;
 
