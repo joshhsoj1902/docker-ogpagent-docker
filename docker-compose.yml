@@ -25,3 +25,4 @@ services:
       - OGP_OGP_MANAGES_FTP=1
       - OGP_FTP_METHOD=PureFTPd
       - OGP_AUTORESTART_SERVER=1
+      - OGP_DOCKER_NAMESPACE=joshhsoj1902
