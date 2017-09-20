@@ -65,6 +65,7 @@ use constant AGENT_PID_FILE =>
   Path::Class::File->new(AGENT_RUN_DIR, 'ogp_agent.pid');
 use constant STEAM_LICENSE_OK => "Accept";
 use constant STEAM_LICENSE	=> $Cfg::Config{steam_license};
+use constant GAME_DIR => $Cfg::Config{game_dir};
 use constant MANUAL_TMP_DIR   => Path::Class::Dir->new(AGENT_RUN_DIR, 'tmp');
 use constant STEAMCMD_CLIENT_DIR => Path::Class::Dir->new(AGENT_RUN_DIR, 'steamcmd');
 use constant STEAMCMD_CLIENT_BIN =>
@@ -307,7 +308,7 @@ my $d = Frontier::Daemon::Forking->new(
 				 rebootnow						=> \&rebootnow,
 				 what_os					  	=> \&what_os,
 				 start_file_download		  	=> \&start_file_download,
-				 lock_additional_files          => \&lock_additional_files,
+				 lock_additional_files          => \&mocked_lock_additional_files,
 				 is_file_download_in_progress 	=> \&is_file_download_in_progress,
 				 uncompress_file			  	=> \&uncompress_file,
 				 discover_ips					=> \&discover_ips,
@@ -322,7 +323,7 @@ my $d = Frontier::Daemon::Forking->new(
 				 master_server_update			=> \&master_server_update,
 				 secure_path					=> \&secure_path,
 				 get_chattr						=> \&get_chattr,
-				 ftp_mgr						=> \&ftp_mgr,
+				 ftp_mgr						=> \&mock_ftp_mgr,
 				 compress_files					=> \&compress_files,
 				 stop_fastdl					=> \&stop_fastdl,
 				 restart_fastdl					=> \&restart_fastdl,
@@ -565,17 +566,20 @@ sub decrypt_param
 	$param = decode_base64($param);
 	$param = Crypt::XXTEA::decrypt($param, AGENT_KEY);
 	$param = decode_base64($param);
+  logger "Param  $param";
 	return $param;
 }
 
 sub decrypt_params
 {
 	my @params;
+  logger "vvvvvvvvvvvvvvvvvvv";
 	foreach my $param (@_)
 	{
 		$param = &decrypt_param($param);
 		push(@params, $param);
 	}
+  logger "^^^^^^^^^^^^^^^^^";
 	return @params;
 }
 
@@ -643,6 +647,7 @@ sub check_steam_cmd_client
 
 sub is_screen_running
 {
+  logger "is_screen_running";
 	return "Bad Encryption Key" unless(decrypt_param(pop(@_)) eq "Encryption checking OK");
 	my ($screen_type, $home_id) = decrypt_params(@_);
 	return is_screen_running_without_decrypt($screen_type, $home_id);
@@ -650,25 +655,33 @@ sub is_screen_running
 
 sub is_screen_running_without_decrypt
 {
+  logger "is_screen_running_without_decrypt";
 	my ($screen_type, $home_id) = @_;
 
-	my $screen_id = create_screen_id($screen_type, $home_id);
+  my $service_name = $home_id . '_game';
+  logger '$service_name ' .  $service_name;
 
-	my $is_running = `screen -list | grep $screen_id`;
+  my $docker_service = `sudo docker service ls --format='{{.Name}}' | grep -oh '$service_name' | wc -w`;
 
-	if ($is_running =~ /^\s*$/)
-	{
-		return 0;
-	}
-	else
-	{
-		return 1;
-	}
+  logger 'docker_service_cmd' . $docker_service;
+
+  # my $docker_replicas = sudo_exec_without_decrypt($docker_service_cmd);
+
+  if ($docker_service > 0) {
+    logger 'Service running ' . $docker_service;
+    return 1;
+  }
+  else
+  {
+    logger 'Service is not up ' . $docker_service;
+    return 0;
+  }
 }
 
 # Delete Server Stopped Status File:
 sub deleteStoppedStatFile
 {
+  logger "deleteStoppedStatFile";
 	my ($home_path) = @_;
 	my $server_stop_status_file = Path::Class::File->new($home_path, "SERVER_STOPPED");
 	if(-e $server_stop_status_file)
@@ -677,9 +690,33 @@ sub deleteStoppedStatFile
 	}
 }
 
+
+sub gomplate_compose
+{
+  my ($game_instance_dir) = @_;
+
+  my $gomplate = '/usr/local/bin/gomplate';
+  my $datasource = 'config=file://' . $game_instance_dir . '/docker-config.yml';
+  my $template = '/opt/OGP/templates/docker-compose.tmpl';
+  my $output = $game_instance_dir . '/docker-compose.yml';
+
+  my $gomplate_cmd = $gomplate . ' -d ' . $datasource . ' -f ' . $template . ' -o ' . $output;
+
+  logger 'The gomplate command: ' . $gomplate_cmd;
+
+  sudo_exec_without_decrypt($gomplate_cmd);
+
+  my $append_env_cmd = 'cat ' . $game_instance_dir . '/docker-environment.yml >> ' . $output;
+
+  sudo_exec_without_decrypt($append_env_cmd);
+
+  return 1;
+}
+
 # Universal startup function
 sub universal_start
 {
+  logger "universal_start";
 	chomp(@_);
 	return "Bad Encryption Key" unless(decrypt_param(pop(@_)) eq "Encryption checking OK");
 	return universal_start_without_decrypt(decrypt_params(@_));
@@ -688,6 +725,7 @@ sub universal_start
 # Split to two parts because of internal calls.
 sub universal_start_without_decrypt
 {
+  logger "universal_start_without_decrypt";
 	my (
 		$home_id, $home_path, $server_exe, $run_dir,
 		$startup_cmd, $server_port, $server_ip, $cpu, $nice, $preStart, $envVars
@@ -696,178 +734,43 @@ sub universal_start_without_decrypt
 	# Replace any {OGP_HOME_DIR} in the $start_cmd with the server's home directory path
 	$startup_cmd = replace_OGP_Env_Vars($home_id, $home_path, $startup_cmd);
 
+  logger "=================================";
+  logger "HOME_id $home_id";
+  logger "home_path $home_path";
+  logger "server_exe $server_exe";
+  logger "run_dir $run_dir";
+  logger "startup command: $startup_cmd";
+
+  logger "server_port $server_port";
+  logger "server_ip $server_ip";
+  logger "cpu $cpu";
+  logger "nice $nice";
+  logger "preStart $preStart";
+  logger "envVars $envVars";
+  logger "=================================";
+
+  my $game_instance_dir = GAME_DIR . '/' . $home_id;
+  logger "game_instance_dir   $game_instance_dir";
+
 	if (is_screen_running_without_decrypt(SCREEN_TYPE_HOME, $home_id) == 1)
 	{
 		logger "This server is already running (ID: $home_id).";
 		return -14;
 	}
 
-	if (!-e $home_path)
-	{
-		logger "Can't find server's install path [ $home_path ].";
-		return -10;
-	}
+  #The game isn't installed yet on first launch meaning the config file isn't set up
+  if (not -d $game_instance_dir) {
+    start_docker_install($home_id);
+    return 0;
+  }
 
-	my $uid = `id -u`;
-	chomp $uid;
-	my $gid = `id -g`;
-	chomp $gid;
-	my $path = $home_path;
-	$path =~ s/('+)/'\"$1\"'/g;
-	sudo_exec_without_decrypt('chown -Rf '.$uid.':'.$gid.' \''.$path.'\'');
+  gomplate_compose($game_instance_dir);
 
-	# Some game require that we are in the directory where the binary is.
-	my $game_binary_dir = Path::Class::Dir->new($home_path, $run_dir);
-	if ( -e $game_binary_dir && !chdir $game_binary_dir)
-	{
-		logger "Could not change to server binary directory $game_binary_dir.";
-		return -12;
-	}
+  my $docker_run_command = 'docker stack deploy -c ' . $game_instance_dir . '/docker-compose.yml ' . $home_id;
+  logger 'docker command: ' . $docker_run_command;
+  sudo_exec_without_decrypt($docker_run_command);
+  return 1;
 
-	secure_path_without_decrypt('chattr-i', $server_exe);
-
-	if (!-x $server_exe)
-	{
-		if (!chmod 0755, $server_exe)
-		{
-			logger "The $server_exe file is not executable.";
-			return -13;
-		}
-	}
-
-	if(defined $preStart && $preStart ne ""){
-		# Get it in the format that the startup file can use
-		$preStart = multiline_to_startup_comma_format($preStart);
-	}else{
-		$preStart = "";
-	}
-
-	if(defined $envVars && $envVars ne ""){
-		# Replace variables in the envvars if they exist
-		my @prestartenvvars = split /[\r\n]+/, $envVars;
-		my $envVarStr = "";
-		foreach my $line (@prestartenvvars) {
-			$line = replace_OGP_Env_Vars($home_id, $home_path, $line);
-			if($line ne ""){
-				logger "Configuring environment variable: $line";
-				$envVarStr .= "$line\n";
-			}
-		}
-
-		if(defined $envVarStr && $envVarStr ne ""){
-			$envVars = $envVarStr;
-		}
-
-		# Get it in the format that the startup file can use
-		$envVars = multiline_to_startup_comma_format($envVars);
-	}else{
-		$envVars = "";
-	}
-
-	secure_path_without_decrypt('chattr+i', $server_exe);
-
-	# Create startup file for the server.
-	my $startup_file =
-	  Path::Class::File->new(GAME_STARTUP_DIR, "$server_ip-$server_port");
-	if (open(STARTUP, '>', $startup_file))
-	{
-		print STARTUP
-		  "$home_id,$home_path,$server_exe,$run_dir,$startup_cmd,$server_port,$server_ip,$cpu,$nice,$preStart,$envVars";
-		logger "Created startup flag for $server_ip-$server_port";
-		close(STARTUP);
-	}
-	else
-	{
-		logger "Cannot create file in " . $startup_file . " : $!";
-	}
-
-	if(defined $preStart && $preStart ne ""){
-		# Get it in the format that the startup file can use
-		$preStart = startup_comma_format_to_multiline($preStart);
-	}else{
-		$preStart = "";
-	}
-
-	if(defined $envVars && $envVars ne ""){
-		# Get it in the format that the startup file can use
-		$envVars = startup_comma_format_to_multiline($envVars);
-	}else{
-		$envVars = "";
-	}
-
-	# Create the startup string.
-	my $screen_id = create_screen_id(SCREEN_TYPE_HOME, $home_id);
-	my $file_extension = substr $server_exe, -4;
-	my $cli_bin;
-	my $command;
-	my $run_before_start;
-
-	if($file_extension eq ".exe" or $file_extension eq ".bat")
-	{
-		$command = "wine $server_exe $startup_cmd";
-
-		if ($cpu ne 'NA')
-		{
-			$command = "taskset -c $cpu wine $server_exe $startup_cmd";
-		}
-
-		if(defined($Cfg::Preferences{ogp_autorestart_server}) &&  $Cfg::Preferences{ogp_autorestart_server} eq "1"){
-			deleteStoppedStatFile($home_path);
-			$cli_bin = create_screen_cmd_loop($screen_id, $command, $envVars);
-		}else{
-			$cli_bin = create_screen_cmd($screen_id, $command);
-		}
-	}
-	elsif($file_extension eq ".jar")
-	{
-		$command = "$startup_cmd";
-
-		if ($cpu ne 'NA')
-		{
-			$command = "taskset -c $cpu $startup_cmd";
-		}
-
-		if(defined($Cfg::Preferences{ogp_autorestart_server}) &&  $Cfg::Preferences{ogp_autorestart_server} eq "1"){
-			deleteStoppedStatFile($home_path);
-			$cli_bin = create_screen_cmd_loop($screen_id, $command, $envVars);
-		}else{
-			$cli_bin = create_screen_cmd($screen_id, $command);
-		}
-	}
-	else
-	{
-		$command = "./$server_exe $startup_cmd";
-
-		if ($cpu ne 'NA')
-		{
-			$command = "taskset -c $cpu ./$server_exe $startup_cmd";
-		}
-
-		if(defined($Cfg::Preferences{ogp_autorestart_server}) &&  $Cfg::Preferences{ogp_autorestart_server} eq "1"){
-			deleteStoppedStatFile($home_path);
-			$cli_bin = create_screen_cmd_loop($screen_id, $command, $envVars);
-		}else{
-			$cli_bin = create_screen_cmd($screen_id, $command);
-		}
-	}
-
-	my $log_file = Path::Class::File->new(SCREEN_LOGS_DIR, "screenlog.$screen_id");
-	backup_home_log( $home_id, $log_file );
-
-	logger
-	  "Startup command [ $cli_bin ] will be executed in dir $game_binary_dir.";
-
-	# Run before start script and set environment variables which will affect create_screen_cmd only... loop already has the envvars as well
-	$run_before_start = run_before_start_commands($home_id, $home_path, $preStart, $envVars);
-
-	system($cli_bin);
-
-	sleep(1);
-
-	renice_process_without_decrypt($home_id, $nice);
-
-	chdir AGENT_RUN_DIR;
-	return 1;
 }
 
 # This is used to change the priority of process
@@ -875,12 +778,14 @@ sub universal_start_without_decrypt
 # @return -1 in case of an error.
 sub renice_process
 {
+  logger "renice_process";
 	return "Bad Encryption Key" unless(decrypt_param(pop(@_)) eq "Encryption checking OK");
 	return renice_process_without_decrypt(decrypt_params(@_));
 }
 
 sub renice_process_without_decrypt
 {
+  logger "renice_process_without_decrypt";
 	my ($home_id, $nice) = @_;
 	if ($nice != 0)
 	{
@@ -908,11 +813,13 @@ sub renice_process_without_decrypt
 # This is used to force a process to run on a particular CPU
 sub force_cpu
 {
+  logger "force_cpu";
 	return force_cpu_without_decrypt(decrypt_params(@_));
 }
 
 sub force_cpu_without_decrypt
 {
+  logger "force_cpu_without_decrypt";
 	my ($home_id, $cpu) = @_;
 	if ($cpu ne 'NA')
 	{
@@ -940,6 +847,7 @@ sub force_cpu_without_decrypt
 # Returns the number of CPUs available.
 sub cpu_count
 {
+  logger "cpu_count";
 	return "Bad Encryption Key" unless(decrypt_param(pop(@_)) eq "Encryption checking OK");
 	if (!-e "/proc/cpuinfo")
 	{
@@ -968,9 +876,27 @@ sub cpu_count
 # @return 1 when file does not exist.
 sub rfile_exists
 {
+  logger "rfile_exists";
 	return "Bad Encryption Key" unless(decrypt_param(pop(@_)) eq "Encryption checking OK");
+
 	chdir AGENT_RUN_DIR;
 	my $checkFile = decrypt_param(@_);
+
+  # Speacial handling for 'startup' which is used to know if a service has been started
+  # This may not be needed...
+  if (index($checkFile, 'startups') != -1) {
+     logger 'Its a health check, say its down!';
+     return 1;
+     #my $docker_replicas = `sudo docker service inspect --format='{{.Spec.Mode.Replicated.Replicas}}' $service_name`;
+  }
+  else
+  {
+    return 0;
+  }
+
+
+
+# docker service ls --format "{{.PORTS}}"
 
 	if (-e $checkFile)
 	{
@@ -991,6 +917,7 @@ sub rfile_exists
 # @return 0 when check is ok.
 sub quick_chk
 {
+  logger "Doing a quick_chk";
 	my $dec_check = &decrypt_param(@_);
 	if ($dec_check ne 'hello')
 	{
@@ -998,6 +925,19 @@ sub quick_chk
 		return 1;
 	}
 	return 0;
+}
+
+sub log_rpc
+{
+  my @newlist = @{my $self->{@_}};
+  logger "vvvvvvvvvv START vvvvvvvvvvv";
+  foreach (&decrypt_params(@newlist))
+  {
+    logger "PARAM " . $_;
+  }
+  logger "^^^^^^^^^^^^^^ Done ^^^^^^^^^^^^^";
+  # logger "Logged RPC params (sub) " . decrypt_params(@_);
+	# return 0;
 }
 
 ### Return -10 If home path is not found.
@@ -1008,71 +948,31 @@ sub quick_chk
 ### Return 2;content If log found but screen is not running.
 sub get_log
 {
+  logger "get_log";
 	return "Bad Encryption Key" unless(decrypt_param(pop(@_)) eq "Encryption checking OK");
+
 	my ($screen_type, $home_id, $home_path, $nb_of_lines, $log_file) = decrypt_params(@_);
 
-	if (!chdir $home_path)
-	{
-		logger "Can't change to server's install path [ $home_path ].";
-		return -10;
-	}
-
-	if (   ($screen_type eq SCREEN_TYPE_UPDATE)
-		&& ($screen_type eq SCREEN_TYPE_HOME))
-	{
-		logger "Invalid screen type '$screen_type'.";
-		return -9;
-	}
-
-	if(!$log_file)
-	{
-		my $screen_id = create_screen_id($screen_type, $home_id);
-		$log_file = Path::Class::File->new(SCREEN_LOGS_DIR, "screenlog.$screen_id");
-	}
-	else
-	{
-		$log_file = Path::Class::File->new($home_path, $log_file);
-	}
-
-	chmod 0644, $log_file;
-
-	# Create local copy of current log file if SCREEN_LOG_LOCAL = 1
-	if(SCREEN_LOG_LOCAL == 1)
-	{
-		my $log_local = Path::Class::File->new($home_path, "LOG_$screen_type.txt");
-		if ( -e $log_local )
-		{
-			unlink $log_local;
-		}
-
-		# Copy log file only if it's not an UPDATE type as it may contain steam credentials
-		if($screen_type eq SCREEN_TYPE_HOME){
-			copy($log_file, $log_local);
-		}
-	}
-
-	# Regenerate the log file if it doesn't exist
-	unless ( -e $log_file )
-	{
-		if (open(NEWLOG, '>', $log_file))
-		{
-			logger "Log file missing, regenerating: " . $log_file;
-			print NEWLOG "Log file missing, started new log\n";
-			close(NEWLOG);
-		}
-		else
-		{
-			logger "Cannot regenerate log file in " . $log_file . " : $!";
-			return -8;
-		}
-	}
+  my $service_name = $home_id . '_game';
+  logger '$service_name ' .  $service_name;
 
 	# Return a few lines of output to the web browser
-	my(@modedlines) = `tail -n $nb_of_lines $log_file`;
+	# my(@modedlines) = `tail -n $nb_of_lines $log_file`;
+
+  my(@modedlines) = `sudo docker service logs --raw --tail 2 $service_name`;
+
+  if(is_screen_running_without_decrypt($screen_type, $home_id) == 1)
+	{
+    my $containerId = `sudo docker ps --filter label=com.docker.swarm.service.name=$service_name --format='table {{.ID}}'`;
+
+    #TODO: Doing something like the follwoing line would give better logging if the service is up
+    # push @modedlines `docker exec $containerId tail -n $nb_of_lines tail ./log/console/gmodserver-console.log`;
+  }
 
 	my $linecount = 0;
 
 	foreach my $line (@modedlines) {
+    logger ' Log Line: (' . $linecount . ')' . $line;
 		#Text replacements to remove the Steam user login from steamcmd logs for security reasons.
 		$line =~ s/login .*//g;
 		$line =~ s/Logging .*//g;
@@ -1089,20 +989,13 @@ sub get_log
 	}
 
 	my $encoded_content = encode_list(@modedlines);
-	chdir AGENT_RUN_DIR;
-	if(is_screen_running_without_decrypt($screen_type, $home_id) == 1)
-	{
-		return "1;" . $encoded_content;
-	}
-	else
-	{
-		return "2;" . $encoded_content;
-	}
+  return "1;" . $encoded_content;
 }
 
 # stop server function
 sub stop_server
 {
+  logger "stop_server";
 	chomp(@_);
 	return "Bad Encryption Key" unless(decrypt_param(pop(@_)) eq "Encryption checking OK");
 	return stop_server_without_decrypt(decrypt_params(@_));
@@ -1113,138 +1006,14 @@ sub stop_server
 ### Return 0 on success
 sub stop_server_without_decrypt
 {
+  logger "stop_server_without_decrypt";
 	my ($home_id, $server_ip, $server_port, $control_protocol,
 		$control_password, $control_type, $home_path) = @_;
 
-	my $startup_file = Path::Class::File->new(GAME_STARTUP_DIR, "$server_ip-$server_port");
-
-	if (-e $startup_file)
-	{
-		logger "Removing startup flag " . $startup_file . "";
-		unlink($startup_file)
-		  or logger "Cannot remove the startup flag file $startup_file $!";
-	}
-
-	# Create file indicator that the game server has been stopped if defined
-	if(defined($Cfg::Preferences{ogp_autorestart_server}) &&  $Cfg::Preferences{ogp_autorestart_server} eq "1"){
-
-		# Get current directory and chdir into the game's home dir
-		my $curDir = getcwd();
-		chdir $home_path;
-
-		# Create stopped indicator file used by autorestart of OGP if server crashes
-		open(STOPFILE, '>', "SERVER_STOPPED");
-		close(STOPFILE);
-
-		# Return to original directory
-		chdir $curDir;
-	}
-
-	# Some validation checks for the variables.
-	if ($server_ip =~ /^\s*$/ || $server_port < 0 || $server_port > 65535)
-	{
-		logger("Invalid IP:Port given $server_ip:$server_port.");
-		return 1;
-	}
-
-	if ($control_password !~ /^\s*$/ and $control_protocol ne "")
-	{
-		if ($control_protocol eq "rcon")
-		{
-			use KKrcon::KKrcon;
-			my $rcon = new KKrcon(
-								  Password => $control_password,
-								  Host	 => $server_ip,
-								  Port	 => $server_port,
-								  Type	 => $control_type
-								 );
-
-			my $rconCommand = "quit";
-			$rcon->execute($rconCommand);
-		}
-		elsif ($control_protocol eq "rcon2")
-		{
-			use KKrcon::HL2;
-			my $rcon2 = new HL2(
-								  hostname => $server_ip,
-								  port	 => $server_port,
-								  password => $control_password,
-								  timeout  => 2
-								 );
-
-			my $rconCommand = "quit";
-			$rcon2->run($rconCommand);
-		}
-
-		if (is_screen_running_without_decrypt(SCREEN_TYPE_HOME, $home_id) == 0)
-		{
-			logger "Stopped server $server_ip:$server_port with rcon quit.";
-			return 0;
-		}
-		else
-		{
-			logger "Failed to send rcon quit. Stopping server with kill command.";
-		}
-
-		my @server_pids = get_home_pids($home_id);
-
-		my $cnt;
-		foreach my $pid (@server_pids)
-		{
-			chomp($pid);
-			$cnt = kill 15, $pid;
-
-			if ($cnt != 1)
-			{
-				$cnt = kill 9, $pid;
-				if ($cnt == 1)
-				{
-					logger "Stopped process with pid $pid successfully using kill 9.";
-				}
-				else
-				{
-					logger "Process $pid can not be stopped.";
-				}
-			}
-			else
-			{
-				logger "Stopped process with pid $pid successfully using kill 15.";
-			}
-		}
-		system('screen -wipe > /dev/null 2>&1');
-		return 0;
-	}
-	else
-	{
-		logger "Remote control protocol not available or PASSWORD NOT SET. Using kill signal instead.";
-		my @server_pids = get_home_pids($home_id);
-
-		my $cnt;
-		foreach my $pid (@server_pids)
-		{
-			chomp($pid);
-			$cnt = kill 15, $pid;
-
-			if ($cnt != 1)
-			{
-				$cnt = kill 9, $pid;
-				if ($cnt == 1)
-				{
-					logger "Stopped process with pid $pid successfully using kill 9.";
-				}
-				else
-				{
-					logger "Process $pid can not be stopped.";
-				}
-			}
-			else
-			{
-				logger "Stopped process with pid $pid successfully using kill 15.";
-			}
-		}
-		system('screen -wipe > /dev/null 2>&1');
-		return 0;
-	}
+  my $docker_run_command = 'docker stack rm ' . $home_id;
+  logger 'docker command: ' . $docker_run_command;
+  sudo_exec_without_decrypt($docker_run_command);
+  return 0;
 }
 
 ##### Send RCON command
@@ -1252,6 +1021,7 @@ sub stop_server_without_decrypt
 ### Return 1 on success
 sub send_rcon_command
 {
+  logger "send_rcon_command";
 	return "Bad Encryption Key" unless(decrypt_param(pop(@_)) eq "Encryption checking OK");
 	my ($home_id, $server_ip, $server_port, $control_protocol,
 		$control_password, $control_type, $rconCommand) = decrypt_params(@_);
@@ -1329,9 +1099,15 @@ sub send_rcon_command
 ### @return -1 If cannot open the directory.
 sub dirlist
 {
+  logger "dirlist";
 	return "Bad Encryption Key" unless(decrypt_param(pop(@_)) eq "Encryption checking OK");
 	my ($datadir) = &decrypt_param(@_);
 	logger "Asked for dirlist of $datadir directory.";
+  return "foo;bar";
+
+
+
+
 	if (!-d $datadir)
 	{
 		logger "ERROR - Directory [ $datadir ] not found!";
@@ -1354,153 +1130,38 @@ sub dirlist
 ### @return -2 If cannot open the directory.
 sub dirlistfm
 {
+  logger "send_rcon_command";
 	return "Bad Encryption Key" unless(decrypt_param(pop(@_)) eq "Encryption checking OK");
 	my $datadir = &decrypt_param(@_);
 
 	logger "Asked for dirlist of $datadir directory.";
 
-	if (!-d $datadir)
-	{
-		logger "ERROR - Directory [ $datadir ] not found!";
-		return -1;
-	}
-
-	if (!opendir(DIR, $datadir))
-	{
-		logger "ERROR - Can't open $datadir: $!";
-		return -2;
-	}
-
-	my $dir = $datadir;
-	$dir =~ s/('+)/'"$1"'/g;
-	my $lsattr = `lsattr '$dir' 2>/dev/null`;
-
-	my @attr_all = split /\n+/, $lsattr;
-
-	my %attr = ();
-
-	my ($a, $p, @f);
-
-	foreach (@attr_all)
-	{
-		($a, $p) = split(/\s/, $_, 2);
-		@f = split /\//, $p;
-		$attr{$f[-1]}	= $a;
-	}
-
-	my %dirfiles = ();
-
-	my (
-		$dev,  $ino,   $mode,  $nlink, $uid,	 $gid, $rdev,
-		$size, $atime, $mtime, $ctime, $blksize, $blocks
-	   );
-
-	my $count = 0;
-
-	chdir($datadir);
-
-	while (my $item = readdir(DIR))
-	{
-		#skip the . and .. special dirs
-		next if $item eq '.';
-		next if $item eq '..';
-		#print "Dir list is" . $item."\n";
-		#Stat the file to get ownership and size
-		(
-		 $dev,  $ino,   $mode,  $nlink, $uid,	 $gid, $rdev,
-		 $size, $atime, $mtime, $ctime, $blksize, $blocks
-		) = stat($item);
-
-		$uid = getpwuid($uid);
-		$gid = getgrgid($gid);
-
-		#This if else logic determines what it is, File, Directory, other
-		if (-T $item)
-		{
-			# print "File\n";
-			$dirfiles{'files'}{$count}{'filename'}	= encode_base64($item);
-			$dirfiles{'files'}{$count}{'size'}		= $size;
-			$dirfiles{'files'}{$count}{'user'}		= $uid;
-			$dirfiles{'files'}{$count}{'group'}		= $gid;
-			$dirfiles{'files'}{$count}{'attr'}		= $attr{$item};
-		}
-		elsif (-d $item)
-		{
-			# print "Dir\n";
-			$dirfiles{'directorys'}{$count}{'filename'}	= encode_base64($item);
-			$dirfiles{'directorys'}{$count}{'size'}		= $size;
-			$dirfiles{'directorys'}{$count}{'user'}		= $uid;
-			$dirfiles{'directorys'}{$count}{'group'}	= $gid;
-		}
-		elsif (-B $item)
-		{
-			#print "File\n";
-			$dirfiles{'binarys'}{$count}{'filename'}	= encode_base64($item);
-			$dirfiles{'binarys'}{$count}{'size'}		= $size;
-			$dirfiles{'binarys'}{$count}{'user'}		= $uid;
-			$dirfiles{'binarys'}{$count}{'group'}		= $gid;
-			$dirfiles{'binarys'}{$count}{'attr'}		= $attr{$item};
-		}
-		else
-		{
-			#print "Unknown\n"
-			#will be listed as common files;
-			$dirfiles{'files'}{$count}{'filename'}	= encode_base64($item);
-			$dirfiles{'files'}{$count}{'size'}		= $size;
-			$dirfiles{'files'}{$count}{'user'}		= $uid;
-			$dirfiles{'files'}{$count}{'group'}		= $gid;
-			$dirfiles{'files'}{$count}{'attr'}		= $attr{$item};
-		}
-		$count++;
-	}
-	closedir(DIR);
-
-	if ($count eq 0)
-	{
-		logger "Empty directory $datadir.";
-		return 1;
-	}
-
-	chdir AGENT_RUN_DIR;
-	#Now we return it to the webpage, as array
-	return {%dirfiles};
+  return 1;
 }
+
+sub map_filepath
+{
+  my ($filepath) = @_;
+  logger "Mapping filepath ". $filepath;
+  my $find    = '/home/ogp_agent/OGP_User_Files/';
+  my $replace = GAME_DIR;
+
+  $filepath =~ s/$find/$replace/g;
+  logger "Mapped filepath ". $filepath;
+  return $filepath;
+}
+
 
 ###### Returns the contents of a text file
 sub readfile
 {
+  logger "readfile";
 	return "Bad Encryption Key" unless(decrypt_param(pop(@_)) eq "Encryption checking OK");
 	chdir AGENT_RUN_DIR;
 	my $userfile = &decrypt_param(@_);
 
-	unless ( -e $userfile )
-	{
-		if (open(BLANK, '>', $userfile))
-		{
-			close(BLANK);
-		}
-	}
+  return "1; ";
 
-	if (!open(USERFILE, '<', $userfile))
-	{
-		logger "ERROR - Can't open file $userfile for reading.";
-		return -1;
-	}
-
-	my ($wholefile, $buf);
-
-	while (read(USERFILE, $buf, 60 * 57))
-	{
-		$wholefile .= encode_base64($buf);
-	}
-	close(USERFILE);
-
-	if(!defined $wholefile)
-	{
-		return "1; ";
-	}
-
-	return "1;" . $wholefile;
 }
 
 ###### Backs up file, then writes data to new file
@@ -1508,10 +1169,21 @@ sub readfile
 ### @return 0 In case of a failure
 sub writefile
 {
+  logger "writefile";
 	return "Bad Encryption Key" unless(decrypt_param(pop(@_)) eq "Encryption checking OK");
 	chdir AGENT_RUN_DIR;
 	# $writefile = file we're editing, $filedata = the contents were writing to it
 	my ($writefile, $filedata) = &decrypt_params(@_);
+  $writefile = map_filepath($writefile);
+
+  my 	$filedata2 = decode_base64($filedata);
+  $filedata2 =~ s/\r//g;
+  logger "vvvvvvvvvvvvvvvvvvvvvvvv";
+  logger "writefile $writefile";
+  logger "filedata $filedata";
+  logger "filedata2 $filedata2";
+  logger "^^^^^^^^^^^^^^^^^^^^^^^^^";
+
 	if (!-e $writefile)
 	{
 		open FILE, ">", $writefile;
@@ -1538,6 +1210,11 @@ sub writefile
 		logger "ERROR - Failed to open $writefile for writing.";
 		return 0;
 	}
+
+  # Always clear out the file before writing the new one
+  my $trunc_file = 'truncate -s 0 ' . $writefile;
+  sudo_exec_without_decrypt($trunc_file);
+
 	$filedata = decode_base64($filedata);
 	$filedata =~ s/\r//g;
 	print WRITER "$filedata";
@@ -1551,6 +1228,7 @@ sub writefile
 ### @return 0 In case of a failure
 sub rebootnow
 {
+  logger "rebootnow";
 	return "Bad Encryption Key" unless(decrypt_param(pop(@_)) eq "Encryption checking OK");
 	sudo_exec_without_decrypt('sleep 10s; shutdown -r now');
 	logger "Scheduled system reboot to occur in 10 seconds successfully!";
@@ -1560,8 +1238,10 @@ sub rebootnow
 # Determine the os of the agent machine.
 sub what_os
 {
+  logger "what_os";
 	return "Bad Encryption Key" unless(decrypt_param(pop(@_)) eq "Encryption checking OK");
-	logger "Asking for OS type";
+
+	logger "Asking for OS type JOSH";
 	my $which_uname = `which uname`;
 	chomp $which_uname;
 	if ($which_uname ne "")
@@ -1599,6 +1279,7 @@ sub what_os
 ### @return -3 If resources unavailable.
 sub start_file_download
 {
+  logger "start_file_download";
 	return "Bad Encryption Key" unless(decrypt_param(pop(@_)) eq "Encryption checking OK");
 	my ($url, $destination, $filename, $action, $post_script) = &decrypt_params(@_);
 	logger
@@ -1686,51 +1367,15 @@ sub start_file_download
 	}
 }
 
-sub lock_additional_files{
+sub mocked_lock_additional_files{
+  logger "MOCKED lock_additional_files";
 	return "Bad Encryption Key" unless(decrypt_param(pop(@_)) eq "Encryption checking OK");
-	my ($homedir, $files, $action) = &decrypt_params(@_);
-	return lock_additional_files_logic($homedir, $files, $action);
-}
-
-sub lock_additional_files_logic{
-	my ($homedir, $filesToLock, $action, $returnType) = @_;
-
-	logger "Locking additional files specified in the XML.";
-
-	my $commandStr = "";
-	$filesToLock = startup_comma_format_to_multiline($filesToLock);
-	$filesToLock = replace_OGP_Env_Vars("", $homedir, $filesToLock);
-	my @filesToProcess = split /[\r\n]+/, $filesToLock;
-	foreach my $line (@filesToProcess) {
-		my $fullPath = $homedir . "/" . $line;
-		if($action eq "lock"){
-			if(defined $returnType && $returnType eq "str"){
-				$commandStr .= "echo '".$SUDOPASSWD."' | sudo -S -p \"\" sh -c \"" . secure_path_without_decrypt("chattr+i", $fullPath, $returnType) . "\" > /dev/null 2>&1" . "\n";
-				$commandStr .= "echo '".$SUDOPASSWD."' | sudo -S -p \"\" sh -c \"" . secure_path_without_decrypt("chattr+i", $line, $returnType) . "\" > /dev/null 2>&1" . "\n";
-			}else{
-				secure_path_without_decrypt("chattr+i", $fullPath);
-				secure_path_without_decrypt("chattr+i", $line);
-			}
-		}else{
-			if(defined $returnType && $returnType eq "str"){
-				$commandStr .= "echo '".$SUDOPASSWD."' | sudo -S -p \"\" sh -c \"" . secure_path_without_decrypt("chattr-i", $fullPath, $returnType) . "\" > /dev/null 2>&1" . "\n";
-				$commandStr .= "echo '".$SUDOPASSWD."' | sudo -S -p \"\" sh -c \"" . secure_path_without_decrypt("chattr-i", $line, $returnType) . "\" > /dev/null 2>&1" . "\n";
-			}else{
-				secure_path_without_decrypt("chattr-i", $fullPath);
-				secure_path_without_decrypt("chattr-i", $line);
-			}
-		}
-	}
-
-	if($commandStr ne ""){
-		return $commandStr;
-	}
-
-	return "";
+	return ""
 }
 
 sub run_before_start_commands
 {
+  logger "run_before_start_commands";
 	#return "Bad Encryption Key" unless(decrypt_param(pop(@_)) eq "Encryption checking OK");
 	my ($server_id, $homedir, $beforestartcmd, $envVars) = @_;
 
@@ -1774,6 +1419,7 @@ sub run_before_start_commands
 }
 
 sub multiline_to_startup_comma_format{
+  logger "multiline_to_startup_comma_format";
 	my ($multiLineVar) = @_;
 	$multiLineVar =~ s/,//g; # commas are invalid anyways in bash
 	$multiLineVar =~ s/[\r]+//g;
@@ -1782,6 +1428,7 @@ sub multiline_to_startup_comma_format{
 }
 
 sub startup_comma_format_to_multiline{
+  logger "startup_comma_format_to_multiline";
 	my ($multiLineVar) = @_;
 	$multiLineVar =~ s/{OGPNEWLINE}/\n/g;
 	return $multiLineVar;
@@ -1789,6 +1436,7 @@ sub startup_comma_format_to_multiline{
 
 sub create_secure_script
 {
+  logger "create_secure_script";
 	my ($home_path, $exec_folder_path, $exec_path) = @_;
 	secure_path_without_decrypt('chattr-i', $home_path);
 	my $secure = "$home_path/secure.sh";
@@ -1811,6 +1459,7 @@ sub create_secure_script
 
 sub check_b4_chdir
 {
+  logger "check_b4_chdir";
 	my ( $path ) = @_;
 
 	my $uid = `id -u`;
@@ -1905,6 +1554,8 @@ sub create_bash_scripts
 ### @return 0 In error case.
 sub start_rsync_install
 {
+  #TODO: This function should create the directory and copy the base docker-compose file into Place
+
 	return "Bad Encryption Key" unless(decrypt_param(pop(@_)) eq "Encryption checking OK");
 	my ($home_id, $home_path, $url, $exec_folder_path, $exec_path, $precmd, $postcmd, $filesToLockUnlock) = decrypt_params(@_);
 
@@ -1912,6 +1563,20 @@ sub start_rsync_install
 	{
 		return 0;
 	}
+
+
+  logger "=================================";
+  logger "HOME_id $home_id";
+  logger "home_path $home_path";
+  logger "=================================";
+
+  start_docker_install($home_id);
+
+
+  return 1;
+
+
+
 
 	secure_path_without_decrypt('chattr-i', $home_path);
 
@@ -1940,9 +1605,9 @@ sub start_rsync_install
 
 	my $log_file = Path::Class::File->new(SCREEN_LOGS_DIR, "screenlog.$screen_id");
 
-	if(defined $filesToLockUnlock && $filesToLockUnlock ne ""){
-		$postcmd .= "\n" . lock_additional_files_logic($home_path, $filesToLockUnlock, "lock", "str");
-	}
+	# if(defined $filesToLockUnlock && $filesToLockUnlock ne ""){
+	# 	$postcmd .= "\n" . lock_additional_files_logic($home_path, $filesToLockUnlock, "lock", "str");
+	# }
 
 	backup_home_log( $home_id, $log_file );
 	my $path	= $home_path;
@@ -1957,6 +1622,60 @@ sub start_rsync_install
 	chdir AGENT_RUN_DIR;
 	return 1;
 }
+
+
+
+
+
+
+
+sub start_docker_install
+{
+  #TODO: This function should create the directory and copy the base docker-compose file into Place
+
+	my ($home_id) = @_;
+
+  logger "=================================";
+  logger "HOME_id $home_id";
+  logger "=================================";
+
+  my $game_instance_dir = get_game_instance_dir($home_id);
+
+  #TODO: all this sudo is crazy :(
+  my $mkdir_cmd='mkdir -p ' . $game_instance_dir;
+  sudo_exec_without_decrypt($mkdir_cmd);
+
+  my $touch_cmd='touch ' . $game_instance_dir . '/docker-environment.yml';
+  sudo_exec_without_decrypt($touch_cmd);
+
+  $touch_cmd='touch ' . $game_instance_dir . '/docker-config.yml';
+  sudo_exec_without_decrypt($touch_cmd);
+
+  $touch_cmd='touch ' . $game_instance_dir . '/docker-test.yml';
+  sudo_exec_without_decrypt($touch_cmd);
+
+  my $chmod_cmd='chmod 777 -R ' . $game_instance_dir;
+  sudo_exec_without_decrypt($chmod_cmd);
+
+  #Till we have gomplate
+  sudo_exec_without_decrypt('cp /opt/OGP/docker-compose.gmod.yml ' . $game_instance_dir);
+
+  return 1
+}
+
+sub get_game_instance_dir
+{
+  my ($home_id) = @_;
+  my $game_instance_dir = GAME_DIR . '/' . $home_id;
+  return $game_instance_dir
+
+}
+
+
+
+
+
+
 
 ### @return PID of the download process if started succesfully.
 ### @return -1 If could not create temporary download directory.
@@ -2110,9 +1829,9 @@ sub steam_cmd_without_decrypt
 
 	my $postcmd_mod = $postcmd;
 
-	if(defined $filesToLockUnlock && $filesToLockUnlock ne ""){
-		$postcmd_mod .= "\n" . lock_additional_files_logic($home_path, $filesToLockUnlock, "lock", "str");
-	}
+	# if(defined $filesToLockUnlock && $filesToLockUnlock ne ""){
+	# 	$postcmd_mod .= "\n" . lock_additional_files_logic($home_path, $filesToLockUnlock, "lock", "str");
+	# }
 
 	my @installcmds = ("$steam_binary +runscript $installtxt +exit");
 
@@ -2475,7 +2194,7 @@ sub discover_ips
 		return "";
 	}
 
-	my $iplist = "";
+	my $iplist = "0.0.0.0";
 	my $ipfound;
 	my $junk;
 
@@ -2709,354 +2428,11 @@ sub get_chattr
 	return sudo_exec_without_decrypt('(lsattr \''.$file_path.'\' | sed -e "s#'.$file.'##g")|grep -o i');
 }
 
-sub ftp_mgr
+sub mock_ftp_mgr
 {
+  logger "Mocked ftp_mgr";
 	return "Bad Encryption Key" unless(decrypt_param(pop(@_)) eq "Encryption checking OK");
-	my ($action, $login, $password, $home_path) = decrypt_params(@_);
 
-	my $uid = `id -u`;
-	chomp $uid;
-	my $gid = `id -g`;
-	chomp $gid;
-
-	$login =~ s/('+)/'\"$1\"'/g;
-	$password =~ s/('+)/'\"$1\"'/g;
-	$home_path =~ s/('+)/'\"$1\"'/g;
-
-	if(!defined($Cfg::Preferences{ogp_manages_ftp}) || (defined($Cfg::Preferences{ogp_manages_ftp}) &&  $Cfg::Preferences{ogp_manages_ftp} eq "1")){
-		if( defined($Cfg::Preferences{ftp_method}) && $Cfg::Preferences{ftp_method} eq "IspConfig")
-		{
-			use constant ISPCONFIG_DIR => Path::Class::Dir->new(AGENT_RUN_DIR, 'IspConfig');
-			use constant FTP_USERS_DIR => Path::Class::Dir->new(ISPCONFIG_DIR, 'ftp_users');
-
-			if (!-d FTP_USERS_DIR && !mkdir FTP_USERS_DIR)
-			{
-				print "Could not create " . FTP_USERS_DIR . " directory $!.";
-				return -1;
-			}
-
-			chdir ISPCONFIG_DIR;
-
-			if($action eq "list")
-			{
-				my $users_list;
-				opendir(USERS, FTP_USERS_DIR);
-				while (my $username = readdir(USERS))
-				{
-					# Skip . and ..
-					next if $username =~ /^\./;
-					$users_list .= `php-cgi -f sites_ftp_user_get.php username=\'$username\'`;
-				}
-				closedir(USERS);
-				if( defined($users_list) )
-				{
-					return "1;".encode_list($users_list);
-				}
-			}
-			elsif($action eq "userdel")
-			{
-				return "1;".encode_list(`php-cgi -f sites_ftp_user_delete.php username=\'$login\'`);
-			}
-			elsif($action eq "useradd")
-			{
-				return "1;".encode_list(`php-cgi -f sites_ftp_user_add.php username=\'$login\' password=\'$password\' dir=\'$home_path\' uid=$uid gid=$gid`);
-			}
-			elsif($action eq "passwd")
-			{
-				return "1;".encode_list(`php-cgi -f sites_ftp_user_update.php type=passwd username=\'$login\' password=\'$password\'`);
-			}
-			elsif($action eq "show")
-			{
-				return "1;".encode_list(`php-cgi -f sites_ftp_user_get.php type=detail username=\'$login\'`);
-			}
-			elsif($action eq "usermod")
-			{
-				return "1;".encode_list(`php-cgi -f sites_ftp_user_update.php username=\'$login\' password=\'$password\'`);
-			}
-		}
-		elsif(defined($Cfg::Preferences{ftp_method}) && $Cfg::Preferences{ftp_method} eq "EHCP" && -e "/etc/init.d/ehcp")
-		{
-			use constant EHCP_DIR => Path::Class::Dir->new(AGENT_RUN_DIR, 'EHCP');
-
-			chdir EHCP_DIR;
-			my $phpScript;
-			my $phpOut;
-
-			chmod 0777, 'ehcp_ftp_log.txt';
-
-			# In order to access the FTP files, the vsftpd user needs to be added to the ogp group
-			sudo_exec_without_decrypt("usermod -a -G '$gid' ftp");
-			sudo_exec_without_decrypt("usermod -a -G '$gid' vsftpd");
-
-			if($action eq "list")
-			{
-				return "1;".encode_list(`php-cgi -f listAllUsers.php`);
-			}
-			elsif($action eq "userdel")
-			{
-				$phpScript = `php-cgi -f delAccount.php username=\'$login\'`;
-				$phpOut = `php-cgi -f syncftp.php`;
-				return $phpScript;
-			}
-			elsif($action eq "useradd")
-			{
-				$phpScript = `php-cgi -f addAccount.php username=\'$login\' password=\'$password\' dir=\'$home_path\' uid=$uid gid=$gid`;
-				$phpOut = `php-cgi -f syncftp.php`;
-				return $phpScript;
-			}
-			elsif($action eq "passwd")
-			{
-				$phpScript = `php-cgi -f updatePass.php username=\'$login\' password=\'$password\'`;
-				$phpOut = `php-cgi -f syncftp.php`;
-				return $phpScript ;
-			}
-			elsif($action eq "show")
-			{
-				return "1;".encode_list(`php-cgi -f showAccount.php username=\'$login\'`);
-			}
-			elsif($action eq "usermod")
-			{
-				$phpScript = `php-cgi -f updateInfo.php username=\'$login\' password=\'$password\'`;
-				$phpOut = `php-cgi -f syncftp.php`;
-				return $phpScript;
-			}
-		}
-		elsif(defined($Cfg::Preferences{ftp_method}) && $Cfg::Preferences{ftp_method} eq "proftpd" && -e $Cfg::Preferences{proftpd_conf_path})
-		{
-			chdir $Cfg::Preferences{proftpd_conf_path};
-			if($action eq "list")
-			{
-				my $users;
-				open(PASSWD, 'ftpd.passwd');
-				while (<PASSWD>) {
-					chomp;
-					my($login, $passwd, $uid, $gid, $gcos, $home, $shell) = split(/:/);
-					$users .= "$login\t$home\n";
-				}
-				close(PASSWD);
-				return "1;".encode_list($users);
-			}
-			elsif($action eq "userdel")
-			{
-				return sudo_exec_without_decrypt("ftpasswd --passwd --delete-user --name='$login'");
-			}
-			elsif($action eq "useradd")
-			{
-				return sudo_exec_without_decrypt("echo '$password' | ftpasswd --passwd --name='$login' --home='$home_path' --shell=/bin/false --uid=$uid --gid=$gid --stdin");
-			}
-			elsif($action eq "passwd")
-			{
-				return sudo_exec_without_decrypt("echo '$password' | ftpasswd --passwd --change-password --name='$login' --stdin");
-			}
-			elsif($action eq "show")
-			{
-				return 1;
-			}
-			elsif($action eq "usermod")
-			{
-				return 1;
-			}
-			chdir AGENT_RUN_DIR;
-		}
-		else
-		{
-			if($action eq "list")
-			{
-				return sudo_exec_without_decrypt("pure-pw list");
-			}
-			elsif($action eq "userdel")
-			{
-				return sudo_exec_without_decrypt("pure-pw userdel '$login' && pure-pw mkdb");
-			}
-			elsif($action eq "useradd")
-			{
-				return sudo_exec_without_decrypt("(echo '$password'; echo '$password') | pure-pw useradd '$login' -u $uid -g $gid -d '$home_path' && pure-pw mkdb");
-			}
-			elsif($action eq "passwd")
-			{
-				return sudo_exec_without_decrypt("(echo '$password'; echo '$password') | pure-pw passwd '$login' && pure-pw mkdb");
-			}
-			elsif($action eq "show")
-			{
-				return sudo_exec_without_decrypt("pure-pw show '$login'");
-			}
-			elsif($action eq "usermod")
-			{
-				my $update_account = "pure-pw usermod '$login' -u $uid -g $gid";
-
-				my @account_settings = split /[\n]+/, $password;
-
-				foreach my $setting (@account_settings) {
-					my ($key, $value) = split /[\t]+/, $setting;
-
-					if( $key eq 'Directory' )
-					{
-						$value =~ s/('+)/'\"$1\"'/g;
-						$update_account .= " -d '$value'";
-					}
-
-					if( $key eq 'Full_name' )
-					{
-						if(  $value ne "" )
-						{
-							$value =~ s/('+)/'\"$1\"'/g;
-							$update_account .= " -c '$value'";
-						}
-						else
-						{
-							$update_account .= ' -c ""';
-						}
-					}
-
-					if( $key eq 'Download_bandwidth' && $value ne ""  )
-					{
-						my $Download_bandwidth;
-						if($value eq 0)
-						{
-							$Download_bandwidth = "\"\"";
-						}
-						else
-						{
-							$Download_bandwidth = $value;
-						}
-						$update_account .= " -t " . $Download_bandwidth;
-					}
-
-					if( $key eq 'Upload___bandwidth' && $value ne "" )
-					{
-						my $Upload___bandwidth;
-						if($value eq 0)
-						{
-							$Upload___bandwidth = "\"\"";
-						}
-						else
-						{
-							$Upload___bandwidth = $value;
-						}
-						$update_account .= " -T " . $Upload___bandwidth;
-					}
-
-					if( $key eq 'Max_files' )
-					{
-						if( $value eq "0" )
-						{
-							$update_account .= ' -n ""';
-						}
-						elsif( $value ne "" )
-						{
-							$update_account .= " -n " . $value;
-						}
-						else
-						{
-							$update_account .= ' -n ""';
-						}
-					}
-
-					if( $key eq 'Max_size' )
-					{
-						if( $value ne "" && $value ne "0" )
-						{
-							$update_account .= " -N " . $value;
-						}
-						else
-						{
-							$update_account .= ' -N ""';
-						}
-					}
-
-					if( $key eq 'Ratio' && $value ne ""  )
-					{
-						my($upload_ratio,$download_ratio) = split/:/,$value;
-
-						if($upload_ratio eq "0")
-						{
-							$upload_ratio = "\"\"";
-						}
-						$update_account .= " -q " . $upload_ratio;
-
-						if($download_ratio eq "0")
-						{
-							$download_ratio = "\"\"";
-						}
-						$update_account .= " -Q " . $download_ratio;
-					}
-
-					if( $key eq 'Allowed_client_IPs' )
-					{
-						if( $value ne "" )
-						{
-							$update_account .= " -r " . $value;
-						}
-						else
-						{
-							$update_account .= ' -r ""';
-						}
-					}
-
-					if( $key eq 'Denied__client_IPs' )
-					{
-						if( $value ne "" )
-						{
-							$update_account .= " -R " . $value;
-						}
-						else
-						{
-							$update_account .= ' -R ""';
-						}
-					}
-
-					if( $key eq 'Allowed_local__IPs' )
-					{
-						if( $value ne "" )
-						{
-							$update_account .= " -i " . $value;
-						}
-						else
-						{
-							$update_account .= ' -i ""';
-						}
-					}
-
-					if( $key eq 'Denied__local__IPs' )
-					{
-						if( $value ne "" )
-						{
-							$update_account .= " -I " . $value;
-						}
-						else
-						{
-							$update_account .= ' -I ""';
-						}
-					}
-
-
-					if( $key eq 'Max_sim_sessions' && $value ne "" )
-					{
-						$update_account .= " -y " . $value;
-					}
-
-					if ( $key eq 'Time_restrictions'  )
-					{
-						if( $value eq "0000-0000")
-						{
-							$update_account .= ' -z ""';
-						}
-						elsif( $value ne "" )
-						{
-							$update_account .= " -z " . $value;
-						}
-						else
-						{
-							$update_account .= ' -z ""';
-						}
-					}
-				}
-				$update_account .=" && pure-pw mkdb";
-				# print $update_account;
-				return sudo_exec_without_decrypt($update_account);
-			}
-		}
-	}
 	return 0;
 }
 

@@ -13,6 +13,7 @@ services:
       - /var/run/docker.sock:/var/run/docker.sock
     environment:
       - OGP_LOGFILE=/opt/OGP/ogp_agent.log
+      - OGP_GAME_DIR=/opt/games
       - OGP_LISTEN_PORT=12679
       - OGP_LISTEN_IP=0.0.0.0
       - OGP_VERSION=v3372
@@ -24,3 +25,4 @@ services:
       - OGP_OGP_MANAGES_FTP=1
       - OGP_FTP_METHOD=PureFTPd
       - OGP_AUTORESTART_SERVER=1
+      - OGP_DOCKER_NAMESPACE=joshhsoj1902

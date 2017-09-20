@@ -1,0 +1,20 @@
+version: '3.1'
+services:
+  game:
+    image: joshhsoj1902/gmod-docker:latest
+    ports:
+      - "27015:27015/tcp"
+      - "27015:27015/udp"
+      - "27020:27020/udp"
+      - "27005:27005/udp"
+    environment:
+      - LGSM_IP="0.0.0.0"
+      - LGSM_PORT="27015"
+      - LGSM_CLIENTPORT="27005"
+      - LGSM_SOURCETVPORT="27020"
+      - LGSM_DEFAULTMAP="gm_construct"
+      - LGSM_MAXPLAYERS="20"
+      - LGSM_TICKRATE="66"
+      - LGSM_GAMEMODE="sandbox"
+      - LGSM_WORKSHOPAUTH=""
+      - LGSM_WORKSHOPCOLLECTIONID=""

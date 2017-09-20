@@ -22,7 +22,7 @@ GitHubUsername="OpenGamePanel"
 #####################
 
 setupOGPDirPerms(){
-	
+
 	chmod -Rf ug+rw $AGENTDIR 2>/dev/null
 	if [ -d "$AGENTDIR/steamcmd" ]; then
 		chmod ug+x $AGENTDIR/steamcmd/linux32/* 2>/dev/null
@@ -89,7 +89,7 @@ detectSystemD(){
 				fi
 			fi
 		fi
-		
+
 		if [ -e "${AGENTDIR}/systemd/ogp_agent.service" ]; then
 			if [ ! -z "$systemdPresent" ] && [ ! -z "$SystemDDir" ]; then
 				echo -e "systemd detected as the init system with a directory of $SystemDDir.  Updating OGP agent to use systemd service init script."
@@ -126,17 +126,17 @@ init() {
 	AGENT="$AGENTDIR/ogp_agent.pl"
 	TIMEOUT=10 # time to wait after a crash (in seconds)
 	PID_FILE=""
-	
+
 	# Should we perform an automatic update?
 	if [ -e $BASH_PREFS_CONF ]
 	then
 		source "$BASH_PREFS_CONF"
-		
+
 		if [ "$agent_auto_update" -eq "1" ]
 		then
 			AUTO_UPDATE="yes"
 		fi
-		
+
 		# Use custom github update address
 		if [ ! -z "$github_update_username" ]; then
 			REVISIONTest=`curl -s https://github.com/${github_update_username}/${REPONAME}/commits/master.atom | egrep -o "([a-f0-9]{40})" | awk 'NR==1{print $1}'`
@@ -144,11 +144,11 @@ init() {
 				GitHubUsername=${github_update_username}
 			fi
 		fi
-		
+
 	else
 		AUTO_UPDATE="yes"
 	fi
-	
+
 	while test $# -gt 0; do
 		case "$1" in
 		"-pidfile")
@@ -282,7 +282,7 @@ update() {
 	fi
 	return 0
 }
-	
+
 run() {
 	getSudoPassword
 	detectSystemD

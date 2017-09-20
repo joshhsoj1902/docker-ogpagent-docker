@@ -1,0 +1,11 @@
+version: '3.1'
+services:
+  game:
+    image: {{if (getenv "OGP_DOCKER_NAMESPACE")}}{{.Env.OGP_DOCKER_NAMESPACE}}{{else}}{{(datasource "config").namespace}}{{end}}/{{(datasource "config").image}}:{{(datasource "config").version}}
+    ports:
+      - "{{(datasource "config").port}}:{{(datasource "config").port}}/tcp"
+      - "{{(datasource "config").port}}:{{(datasource "config").port}}/udp"
+    environment:
+      - LGSM_IP="0.0.0.0"
+      - LGSM_PORT={{(datasource "config").port}}
+      - LGSM_MAXPLAYERS={{(datasource "config").maxplayers}}

@@ -6,4 +6,5 @@
         key => '{{if (getenv "OGP_KEY")}}{{.Env.OGP_KEY}}{{else}}encryption_key{{end}}',
         steam_license => '{{if (getenv "OGP_STEAM_LICENSE")}}{{.Env.OGP_STEAM_LICENSE}}{{else}}Accept{{end}}',
         sudo_password => '{{if (getenv "OGP_SUDO_PASSWORD")}}{{.Env.OGP_SUDO_PASSWORD}}{{else}}ogpuser{{end}}',
+        game_dir => '{{if (getenv "OGP_GAME_DIR")}}{{.Env.OGP_GAME_DIR}}{{else}}/opt/games/{{end}}',
         );
