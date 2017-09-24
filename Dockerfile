@@ -27,7 +27,7 @@ COPY templates /opt/OGP/templates
 
 COPY OGP-Agent-Linux /opt/agent
 
-ADD docker-health.sh
+ADD docker-health.sh /docker-health.sh
 
 RUN chmod +x /docker-health.sh
 
