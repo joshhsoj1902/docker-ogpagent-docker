@@ -5,6 +5,9 @@ services:
     ports:
       - "{{(datasource "config").port}}:{{(datasource "config").port}}/tcp"
       - "{{(datasource "config").port}}:{{(datasource "config").port}}/udp"
+    volumes:
+      - "/home/steam/linuxgsm/logs"
+      - "/home/steam/linuxgsm/serverfiles/{{(datasource "config").dataVol1}}"
     environment:
       - LGSM_IP="0.0.0.0"
       - LGSM_PORT={{(datasource "config").port}}
