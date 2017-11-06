@@ -696,11 +696,17 @@ sub gomplate_compose
   my ($game_instance_dir) = @_;
 
   my $gomplate = '/usr/local/bin/gomplate';
-  my $datasource = 'config=file://' . $game_instance_dir . '/docker-config.yml';
+  my $configdatasource = 'config=file://' . $game_instance_dir . '/docker-config.yml';
+  my $binddatasource = 'bind=file://' . '/opt/OGP/Cfg/bind.yml';
   my $template = '/opt/OGP/templates/docker-compose.tmpl';
   my $output = $game_instance_dir . '/docker-compose.yml';
 
-  my $gomplate_cmd = $gomplate . ' -d ' . $datasource . ' -f ' . $template . ' -o ' . $output;
+  my $gomplate_cmd = $gomplate . ' -d ' . $configdatasource . ' -d ' . $binddatasource . ' -f ' . $template . ' -o ' . $output;
+
+  sudo_exec_without_decrypt('env' );
+  $ENV{bind_gateway} = `sudo docker network inspect --format='{{ (index .IPAM.Config 0).Gateway }}' docker_gwbridge`;
+  sudo_exec_without_decrypt('env' );
+
 
   logger 'The gomplate command: ' . $gomplate_cmd;
 
