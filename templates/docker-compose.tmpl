@@ -14,6 +14,9 @@ services:
     volumes:
       - "/home/steam/linuxgsm/logs"
       - "/home/steam/linuxgsm/serverfiles/{{(datasource "config").dataVol1}}"
+    deploy:
+      placement:
+        constraints: [node.role == manager]
     environment:
       - bind_gateway={{(datasource "bind").bind_gateway}}
       - LGSM_PORT={{(datasource "config").port}}
