@@ -6,11 +6,11 @@ services:
       - target: {{(datasource "config").port}}
         published: {{(datasource "config").port}}
         protocol: tcp
-        mode: host
+        mode: ingress
       - target: {{(datasource "config").port}}
         published: {{(datasource "config").port}}
         protocol: udp
-        mode: host
+        mode: ingress
     volumes:
       - "/home/steam/linuxgsm/logs"
       - "/home/steam/linuxgsm/serverfiles/{{(datasource "config").dataVol1}}"
