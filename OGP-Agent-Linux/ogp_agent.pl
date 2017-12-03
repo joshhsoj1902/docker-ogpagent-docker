@@ -704,7 +704,8 @@ sub gomplate_compose
   my $gomplate_cmd = $gomplate . ' -d ' . $configdatasource . ' -d ' . $binddatasource . ' -f ' . $template . ' -o ' . $output;
 
   sudo_exec_without_decrypt('env' );
-  $ENV{bind_gateway} = `sudo docker network inspect --format='{{ (index .IPAM.Config 0).Gateway }}' docker_gwbridge`;
+  $ENV{bind_gateway} = `sudo docker network inspect --format='{{ (index .IPAM.Config 0).Gateway }}' ingress`;
+#   $ENV{bind_gateway} = `sudo docker network inspect --format='{{ (index .IPAM.Config 0).Gateway }}' docker_gwbridge`;
   sudo_exec_without_decrypt('env' );
 
 
