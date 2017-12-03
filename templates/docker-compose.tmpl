@@ -6,17 +6,20 @@ services:
       - target: {{(datasource "config").port}}
         published: {{(datasource "config").port}}
         protocol: tcp
-        mode: ingress
+        mode: host
       - target: {{(datasource "config").port}}
         published: {{(datasource "config").port}}
         protocol: udp
-        mode: ingress
+        mode: host
     volumes:
       - "/home/steam/linuxgsm/logs"
       - "/home/steam/linuxgsm/serverfiles/{{(datasource "config").dataVol1}}"
-#    deploy:
+    deploy:
 #      placement:
 #        constraints: [node.role == manager]
+      mode: replicated
+      replicas: 1
+      endpoint_mode: dnsrr
     environment:
       - bind_gateway={{(datasource "bind").bind_gateway}}
       - LGSM_PORT={{(datasource "config").port}}
