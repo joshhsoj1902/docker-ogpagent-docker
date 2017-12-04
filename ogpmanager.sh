@@ -3,10 +3,11 @@
 /usr/local/bin/gomplate -f /opt/OGP/templates/Config.pm.tmpl -o /opt/OGP/Cfg/Config.pm
 /usr/local/bin/gomplate -f /opt/OGP/templates/Preferences.pm.tmpl -o /opt/OGP/Cfg/Preferences.pm
 
-# bind_gateway=`docker network inspect --format='{{ (index .IPAM.Config 0).Gateway }}' ingress`
+bind_ingress=`docker network inspect --format='{{ (index .IPAM.Config 0).Gateway }}' ingress`
 bind_gateway=`docker network inspect --format='{{ (index .IPAM.Config 0).Gateway }}' docker_gwbridge`
 
 echo 'bind_gateway: '$bind_gateway > /opt/OGP/Cfg/bind.yml
+echo 'bind_ingress: '$bind_ingress >> /opt/OGP/Cfg/bind.yml
 
 echo 'The bindGW '$bind_gateway
 
