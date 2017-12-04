@@ -717,12 +717,14 @@ sub gomplate_compose
   sudo_exec_without_decrypt($gomplate_cmd);
 
   if( length $bind_ingress ) {
+      logger 'The bind ingress: ' . $bind_ingress;	  
       my $append_ingress_cmd = 'echo       -bind_ingress=' . $bind_ingress . '" >> ' . $output;
       sudo_exec_without_decrypt($append_ingress_cmd);
     }
   #TODO: this needs to be done better, possibly with  a \n, the spacing is correct though
 
   if( length $bind_overlay) {
+      logger 'The bind overlay: ' . $bind_overlay;	  	  
 	  my $append_overlay_cmd = 'echo "      -bind_overlay=' . $bind_overlay . '" >> ' . $output;
       sudo_exec_without_decrypt($append_overlay_cmd);
     }
