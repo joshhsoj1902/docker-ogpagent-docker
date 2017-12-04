@@ -693,7 +693,7 @@ sub deleteStoppedStatFile
 
 sub gomplate_compose
 {
-  my ($game_instance_dir) = @_;
+  my ($game_instance_dir, $home_id) = @_;
 
   my $gomplate = '/usr/local/bin/gomplate';
   my $configdatasource = 'config=file://' . $game_instance_dir . '/docker-config.yml';
@@ -774,7 +774,7 @@ sub universal_start_without_decrypt
     return 0;
   }
 
-  gomplate_compose($game_instance_dir);
+  gomplate_compose($game_instance_dir, $home_id);
 
   my $docker_run_command = 'docker stack deploy -c ' . $game_instance_dir . '/docker-compose.yml ' . $home_id;
   logger 'docker command: ' . $docker_run_command;
