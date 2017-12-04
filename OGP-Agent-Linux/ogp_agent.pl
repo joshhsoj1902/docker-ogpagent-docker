@@ -717,13 +717,13 @@ sub gomplate_compose
   sudo_exec_without_decrypt($gomplate_cmd);
 
   if( length $bind_ingress ) {
-      my $append_ingress_cmd = 'echo "\n      -bind_ingress=' . $bind_ingress . '" >> ' . $output;
+      my $append_ingress_cmd = 'echo       -bind_ingress=' . $bind_ingress . '" >> ' . $output;
       sudo_exec_without_decrypt($append_ingress_cmd);
     }
   #TODO: this needs to be done better, possibly with  a \n, the spacing is correct though
 
   if( length $bind_overlay) {
-	  my $append_overlay_cmd = 'echo "\n      -bind_overlay=' . $bind_overlay . '" >> ' . $output;
+	  my $append_overlay_cmd = 'echo "      -bind_overlay=' . $bind_overlay . '" >> ' . $output;
       sudo_exec_without_decrypt($append_overlay_cmd);
     }
 
@@ -794,7 +794,7 @@ sub universal_start_without_decrypt
   # TODO
   # MASSIVE HACK. the overlay network only exists after the first run
   # compose needs to be ran again to actually handle that network
-  sleep(10);
+  sleep(30);
 
   gomplate_compose($game_instance_dir, $home_id);
 
