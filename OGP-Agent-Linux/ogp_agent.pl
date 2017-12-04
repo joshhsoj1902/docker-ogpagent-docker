@@ -713,6 +713,10 @@ sub gomplate_compose
   my $bind_overlay = `sudo docker network inspect --format='{{ (index .IPAM.Config 0).Gateway }}' $overlay`;
   sudo_exec_without_decrypt('env' );
 
+  #remove so much whitespace
+  $bind_ingress =~ s/^\s+|\s+$//g;
+  $bind_overlay =~ s/^\s+|\s+$//g;
+
 
   logger 'The gomplate command: ' . $gomplate_cmd;
 
