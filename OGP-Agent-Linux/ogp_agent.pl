@@ -707,8 +707,8 @@ sub gomplate_compose
   my $overlay = $home_id . '_default';
 #   $ENV{bind_gateway} = `sudo docker network inspect --format='{{ (index .IPAM.Config 0).Gateway }}' ingress`;
   $ENV{bind_gateway} = `sudo docker network inspect --format='{{ (index .IPAM.Config 0).Gateway }}' docker_gwbridge`;
-  my bind_ingress = `sudo docker network inspect --format='{{ (index .IPAM.Config 0).Gateway }}' ingress`;
-  my bind_overlay = `sudo docker network inspect --format='{{ (index .IPAM.Config 0).Gateway }}' $overlay`;
+  my $bind_ingress = `sudo docker network inspect --format='{{ (index .IPAM.Config 0).Gateway }}' ingress`;
+  my $bind_overlay = `sudo docker network inspect --format='{{ (index .IPAM.Config 0).Gateway }}' $overlay`;
   sudo_exec_without_decrypt('env' );
 
 
