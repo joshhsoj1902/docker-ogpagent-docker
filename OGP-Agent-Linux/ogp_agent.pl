@@ -707,8 +707,8 @@ sub gomplate_compose
   my $overlay = $home_id . '_default';
 #   $ENV{bind_gateway} = `sudo docker network inspect --format='{{ (index .IPAM.Config 0).Gateway }}' ingress`;
   $ENV{bind_gateway} = `sudo docker network inspect --format='{{ (index .IPAM.Config 0).Gateway }}' docker_gwbridge`;
-  $ENV{bind_ingress} = `sudo docker network inspect --format='{{ (index .IPAM.Config 0).Gateway }}' ingress`;
-  $ENV{bind_overlay} = `sudo docker network inspect --format='{{ (index .IPAM.Config 0).Gateway }}' $overlay`;
+  my bind_ingress = `sudo docker network inspect --format='{{ (index .IPAM.Config 0).Gateway }}' ingress`;
+  my bind_overlay = `sudo docker network inspect --format='{{ (index .IPAM.Config 0).Gateway }}' $overlay`;
   sudo_exec_without_decrypt('env' );
 
 
@@ -717,8 +717,13 @@ sub gomplate_compose
   sudo_exec_without_decrypt($gomplate_cmd);
 
   my $append_env_cmd = 'cat ' . $game_instance_dir . '/docker-environment.yml >> ' . $output;
-
   sudo_exec_without_decrypt($append_env_cmd);
+
+  my $append_ingress_cmd = 'echo "      -bind_ingress=' . $bind_ingress . '" >> ' . $output;
+  sudo_exec_without_decrypt($append_ingress_cmd);
+
+  my $append_overlay_cmd = 'echo "      -bind_overlay=' . $bind_overlay . '" >> ' . $output;
+  sudo_exec_without_decrypt($append_overlay_cmd);
 
   return 1;
 }
