@@ -22,7 +22,7 @@ services:
       endpoint_mode: dnsrr
     environment:
       - bind_gateway={{(datasource "bind").bind_gateway}}
-{{if (getenv "bind_overlay")}}      - bind_overlay={{.Env.bind_overlay}}{{end}}
-{{if (getenv "bind_ingress")}}      - bind_ingress={{.Env.bind_ingress}}{{end}}
+      - bind_ingress={{(datasource "bind").bind_ingress}}
+      - bind_overlay={{(datasource "bindlocal").bind_overlay}}
       - LGSM_PORT={{(datasource "config").port}}
       - LGSM_MAXPLAYERS={{(datasource "config").maxplayers}}

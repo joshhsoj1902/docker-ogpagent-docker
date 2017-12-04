@@ -695,27 +695,34 @@ sub gomplate_compose
 {
   my ($game_instance_dir, $home_id) = @_;
 
+  my $bindlocaldir = $game_instance_dir . '/bind.yml';
   my $gomplate = '/usr/local/bin/gomplate';
   my $configdatasource = 'config=file://' . $game_instance_dir . '/docker-config.yml';
   my $binddatasource = 'bind=file://' . '/opt/OGP/Cfg/bind.yml';
+  my $bindlocaldatasource = 'bindlocal=file://' . $bindlocaldir;
   my $template = '/opt/OGP/templates/docker-compose.tmpl';
   my $output = $game_instance_dir . '/docker-compose.yml';
 
-  my $gomplate_cmd = $gomplate . ' -d ' . $configdatasource . ' -d ' . $binddatasource . ' -f ' . $template . ' -o ' . $output;
+  my $gomplate_cmd = $gomplate . ' -d ' . $configdatasource . ' -d ' . $binddatasource . ' -d ' . $bindlocaldatasource . ' -f ' . $template . ' -o ' . $output;
 
   sudo_exec_without_decrypt('env' );
   my $overlay = $home_id . '_default';
   logger 'The detected overlay: ' . $overlay;	  
   
 #   $ENV{bind_gateway} = `sudo docker network inspect --format='{{ (index .IPAM.Config 0).Gateway }}' ingress`;
-  $ENV{bind_gateway} = `sudo docker network inspect --format='{{ (index .IPAM.Config 0).Gateway }}' docker_gwbridge`;
-  my $bind_ingress = `sudo docker network inspect --format='{{ (index .IPAM.Config 0).Gateway }}' ingress`;
+#   $ENV{bind_gateway} = `sudo docker network inspect --format='{{ (index .IPAM.Config 0).Gateway }}' docker_gwbridge`;
+#   my $bind_ingress = `sudo docker network inspect --format='{{ (index .IPAM.Config 0).Gateway }}' ingress`;
   my $bind_overlay = `sudo docker network inspect --format='{{ (index .IPAM.Config 0).Gateway }}' $overlay`;
   sudo_exec_without_decrypt('env' );
 
   #remove so much whitespace
-  $bind_ingress =~ s/^\s+|\s+$//g;
   $bind_overlay =~ s/^\s+|\s+$//g;
+
+  my $catoverlay_cmd = 'echo "bind_gateway: "' . $bind_overlay . ' >> ' . $bindlocaldatasource
+  logger 'The catoverlay_cmd command: ' . $catoverlay_cmd;
+  
+  sudo_exec_without_decrypt($catoverlay_cmd);
+
 
 
   logger 'The gomplate command: ' . $gomplate_cmd;
