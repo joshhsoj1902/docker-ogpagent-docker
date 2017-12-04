@@ -790,6 +790,18 @@ sub universal_start_without_decrypt
   my $docker_run_command = 'docker stack deploy -c ' . $game_instance_dir . '/docker-compose.yml ' . $home_id;
   logger 'docker command: ' . $docker_run_command;
   sudo_exec_without_decrypt($docker_run_command);
+
+  # TODO
+  # MASSIVE HACK. the overlay network only exists after the first run
+  # compose needs to be ran again to actually handle that network
+  sleep(10);
+
+  gomplate_compose($game_instance_dir, $home_id);
+
+  my $docker_run_command = 'docker stack deploy -c ' . $game_instance_dir . '/docker-compose.yml ' . $home_id;
+  logger 'docker command: ' . $docker_run_command;
+  sudo_exec_without_decrypt($docker_run_command);
+
   return 1;
 
 }
