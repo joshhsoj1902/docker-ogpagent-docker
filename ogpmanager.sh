@@ -6,8 +6,8 @@
 bind_ingress=`docker network inspect --format='{{ (index .IPAM.Config 0).Gateway }}' ingress`
 bind_gateway=`docker network inspect --format='{{ (index .IPAM.Config 0).Gateway }}' docker_gwbridge`
 
-echo 'bind_gateway: '$bind_gateway >> /opt/OGP/Cfg/bind.yml
-echo 'bind_ingress: '$bind_ingress > /opt/OGP/Cfg/bind.yml
+echo 'bind_gateway: '$bind_gateway > /opt/OGP/Cfg/bind.yml
+echo 'bind_ingress: '$bind_ingress >> /opt/OGP/Cfg/bind.yml
 
 echo 'The bindGW '$bind_gateway
 
