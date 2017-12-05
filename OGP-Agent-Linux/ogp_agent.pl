@@ -714,12 +714,14 @@ sub gomplate_compose
 #   my $bind_ingress = `sudo docker network inspect --format='{{ (index .IPAM.Config 0).Gateway }}' ingress`;
   my $bind_overlay = `sudo docker network inspect --format='{{ (index .IPAM.Config 0).Gateway }}' $overlay`;
   sudo_exec_without_decrypt('env' );
+  logger 'The bind overlay1: ' . $bind_overlay;	  
 
   #remove so much whitespace
   $bind_overlay =~ s/^\s+|\s+$//g;
+  logger 'The bind overlay2: ' . $bind_overlay;	  
 
   my $bindlocaldatasource = 'bindlocal=file://' . $bindlocalfile;
-  my $catoverlay_cmd = 'echo "bind_gateway: "' . $bind_overlay . ' >> ' . $;
+  my $catoverlay_cmd = 'echo "bind_goverlay: "' . $bind_overlay . ' >> ' . $bindlocalfile;
   logger 'The catoverlay_cmd command: ' . $catoverlay_cmd;
   
   sudo_exec_without_decrypt($catoverlay_cmd);
