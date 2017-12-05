@@ -695,11 +695,11 @@ sub gomplate_compose
 {
   my ($game_instance_dir, $home_id) = @_;
 
-  my $bindlocaldir = $game_instance_dir . '/bind.yml';
+  my $bindlocalfile = $game_instance_dir . '/bind.yml';
   my $gomplate = '/usr/local/bin/gomplate';
   my $configdatasource = 'config=file://' . $game_instance_dir . '/docker-config.yml';
   my $binddatasource = 'bind=file://' . '/opt/OGP/Cfg/bind.yml';
-  my $bindlocaldatasource = 'bindlocal=file://' . $bindlocaldir;
+  my $bindlocaldatasource = 'bindlocal=file://' . $bindlocalfile;
   my $template = '/opt/OGP/templates/docker-compose.tmpl';
   my $output = $game_instance_dir . '/docker-compose.yml';
 
@@ -718,7 +718,8 @@ sub gomplate_compose
   #remove so much whitespace
   $bind_overlay =~ s/^\s+|\s+$//g;
 
-  my $catoverlay_cmd = 'echo "bind_gateway: "' . $bind_overlay . ' >> ' . $bindlocaldatasource
+  my $bindlocaldatasource = 'bindlocal=file://' . $bindlocalfile;
+  my $catoverlay_cmd = 'echo "bind_gateway: "' . $bind_overlay . ' >> ' . $;
   logger 'The catoverlay_cmd command: ' . $catoverlay_cmd;
   
   sudo_exec_without_decrypt($catoverlay_cmd);
@@ -729,18 +730,18 @@ sub gomplate_compose
 
   sudo_exec_without_decrypt($gomplate_cmd);
 
-  if( defined $bind_ingress and length $bind_ingress ) {
-      logger 'The bind ingress: ' . $bind_ingress;	  
-      my $append_ingress_cmd = 'echo       - bind_ingress=' . $bind_ingress . '" >> ' . $output;
-      sudo_exec_without_decrypt($append_ingress_cmd);
-    }
+#   if( defined $bind_ingress and length $bind_ingress ) {
+#       logger 'The bind ingress: ' . $bind_ingress;	  
+#       my $append_ingress_cmd = 'echo       - bind_ingress=' . $bind_ingress . '" >> ' . $output;
+#       sudo_exec_without_decrypt($append_ingress_cmd);
+#     }
   #TODO: this needs to be done better, possibly with  a \n, the spacing is correct though
 
-  if( defined $bind_overlay and length $bind_overlay) {
-      logger 'The bind overlay: ' . $bind_overlay . ' : ' . length $bind_overlay;	  	  
-	  my $append_overlay_cmd = 'echo "      - bind_overlay=' . $bind_overlay . '" >> ' . $output;
-      sudo_exec_without_decrypt($append_overlay_cmd);
-    }
+#   if( defined $bind_overlay and length $bind_overlay) {
+#       logger 'The bind overlay: ' . $bind_overlay . ' : ' . length $bind_overlay;	  	  
+# 	  my $append_overlay_cmd = 'echo "      - bind_overlay=' . $bind_overlay . '" >> ' . $output;
+#       sudo_exec_without_decrypt($append_overlay_cmd);
+#     }
 
 
   my $append_env_cmd = 'cat ' . $game_instance_dir . '/docker-environment.yml >> ' . $output;
