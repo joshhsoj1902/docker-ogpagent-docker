@@ -699,7 +699,7 @@ sub gomplate_compose
   my $gomplate = '/usr/local/bin/gomplate';
   my $configdatasource = 'config=file://' . $game_instance_dir . '/docker-config.yml';
   my $binddatasource = 'bind=file://' . '/opt/OGP/Cfg/bind.yml';
-  my $bindlocaldatasource = 'bindlocal=file://' . $bindlocalfile;
+#   my $bindlocaldatasource = 'bindlocal=file://' . $bindlocalfile;
   my $template = '/opt/OGP/templates/docker-compose.tmpl';
   my $output = $game_instance_dir . '/docker-compose.yml';
 
@@ -727,7 +727,7 @@ sub gomplate_compose
 #   my $catoverlay_cmd = 'echo "bind_goverlay: "' . $bind_overlay . ' >> ' . $bindlocalfile;
 #   logger 'The catoverlay_cmd command: ' . $catoverlay_cmd;
   
-  sudo_exec_without_decrypt($catoverlay_cmd);
+#   sudo_exec_without_decrypt($catoverlay_cmd);
 
 
 
