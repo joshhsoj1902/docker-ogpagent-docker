@@ -23,6 +23,5 @@ services:
     environment:
       - bind_gateway={{(datasource "bind").bind_gateway}}
       - bind_ingress={{(datasource "bind").bind_ingress}}
-      - bind_overlay={{(datasource "bindlocal").bind_overlay}}
       - LGSM_PORT={{(datasource "config").port}}
       - LGSM_MAXPLAYERS={{(datasource "config").maxplayers}}
