@@ -695,7 +695,7 @@ sub gomplate_compose
 {
   my ($game_instance_dir, $home_id) = @_;
 
-  my $bindlocalfile = $game_instance_dir . '/bind.yml';
+#   my $bindlocalfile = $game_instance_dir . '/bind.yml';
   my $gomplate = '/usr/local/bin/gomplate';
   my $configdatasource = 'config=file://' . $game_instance_dir . '/docker-config.yml';
   my $binddatasource = 'bind=file://' . '/opt/OGP/Cfg/bind.yml';
@@ -703,29 +703,29 @@ sub gomplate_compose
   my $template = '/opt/OGP/templates/docker-compose.tmpl';
   my $output = $game_instance_dir . '/docker-compose.yml';
 
-  my $gomplate_cmd = $gomplate . ' -d ' . $configdatasource . ' -d ' . $binddatasource . ' -d ' . $bindlocaldatasource . ' -f ' . $template . ' -o ' . $output;
+  my $gomplate_cmd = $gomplate . ' -d ' . $configdatasource . ' -d ' . $binddatasource . ' -f ' . $template . ' -o ' . $output;
 
-  sudo_exec_without_decrypt('env' );
-  my $overlay = $home_id . '_default';
-  logger 'The detected overlay: ' . $overlay;	  
+#   sudo_exec_without_decrypt('env' );
+#   my $overlay = $home_id . '_default';
+#   logger 'The detected overlay: ' . $overlay;	  
   
 #   $ENV{bind_gateway} = `sudo docker network inspect --format='{{ (index .IPAM.Config 0).Gateway }}' ingress`;
 #   $ENV{bind_gateway} = `sudo docker network inspect --format='{{ (index .IPAM.Config 0).Gateway }}' docker_gwbridge`;
 #   my $bind_ingress = `sudo docker network inspect --format='{{ (index .IPAM.Config 0).Gateway }}' ingress`;
-  my $bind_overlay = "sudo docker network inspect --format='{{ (index .IPAM.Config 0).Gateway }}' $overlay";
-  sudo_exec_without_decrypt('env' );
-  logger 'The bind overlay1: ' . $bind_overlay;	  
+#   my $bind_overlay = "sudo docker network inspect --format='{{ (index .IPAM.Config 0).Gateway }}' $overlay";
+#   sudo_exec_without_decrypt('env' );
+#   logger 'The bind overlay1: ' . $bind_overlay;	  
 
-  #remove so much whitespace
-  $bind_overlay =~ s/^\s+|\s+$//g;
-  logger 'The bind overlay2: ' . $bind_overlay;	  
-  logger 'The bind overlay3: ' . `$bind_overlay`;
-  
-  	  
+#   #remove so much whitespace
+#   $bind_overlay =~ s/^\s+|\s+$//g;
+#   logger 'The bind overlay2: ' . $bind_overlay;	  
+#   logger 'The bind overlay3: ' . `$bind_overlay`;
 
-  my $bindlocaldatasource = 'bindlocal=file://' . $bindlocalfile;
-  my $catoverlay_cmd = 'echo "bind_goverlay: "' . $bind_overlay . ' >> ' . $bindlocalfile;
-  logger 'The catoverlay_cmd command: ' . $catoverlay_cmd;
+
+
+#   my $bindlocaldatasource = 'bindlocal=file://' . $bindlocalfile;
+#   my $catoverlay_cmd = 'echo "bind_goverlay: "' . $bind_overlay . ' >> ' . $bindlocalfile;
+#   logger 'The catoverlay_cmd command: ' . $catoverlay_cmd;
   
   sudo_exec_without_decrypt($catoverlay_cmd);
 
@@ -815,13 +815,13 @@ sub universal_start_without_decrypt
   # TODO
   # MASSIVE HACK. the overlay network only exists after the first run
   # compose needs to be ran again to actually handle that network
-  sleep(30);
+#   sleep(30);
 
-  gomplate_compose($game_instance_dir, $home_id);
+#   gomplate_compose($game_instance_dir, $home_id);
 
-  my $docker_run_command = 'docker stack deploy -c ' . $game_instance_dir . '/docker-compose.yml ' . $home_id;
-  logger 'docker command: ' . $docker_run_command;
-  sudo_exec_without_decrypt($docker_run_command);
+#   my $docker_run_command = 'docker stack deploy -c ' . $game_instance_dir . '/docker-compose.yml ' . $home_id;
+#   logger 'docker command: ' . $docker_run_command;
+#   sudo_exec_without_decrypt($docker_run_command);
 
   return 1;
 
