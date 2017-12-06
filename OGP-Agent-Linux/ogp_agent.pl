@@ -703,17 +703,11 @@ sub gomplate_compose
 
   my $gomplate_cmd = $gomplate . ' -d ' . $configdatasource . ' -d ' . $binddatasource . ' -f ' . $template . ' -o ' . $output;
 
-  sudo_exec_without_decrypt('env' );
-  $ENV{bind_gateway} = `sudo docker network inspect --format='{{ (index .IPAM.Config 0).Gateway }}' docker_gwbridge`;
-  sudo_exec_without_decrypt('env' );
-
-
   logger 'The gomplate command: ' . $gomplate_cmd;
 
   sudo_exec_without_decrypt($gomplate_cmd);
 
   my $append_env_cmd = 'cat ' . $game_instance_dir . '/docker-environment.yml >> ' . $output;
-
   sudo_exec_without_decrypt($append_env_cmd);
 
   return 1;
@@ -775,6 +769,7 @@ sub universal_start_without_decrypt
   my $docker_run_command = 'docker stack deploy -c ' . $game_instance_dir . '/docker-compose.yml ' . $home_id;
   logger 'docker command: ' . $docker_run_command;
   sudo_exec_without_decrypt($docker_run_command);
+
   return 1;
 
 }

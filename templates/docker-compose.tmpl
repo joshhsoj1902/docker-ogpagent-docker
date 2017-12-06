@@ -14,7 +14,12 @@ services:
     volumes:
       - "/home/steam/linuxgsm/logs"
       - "/home/steam/linuxgsm/serverfiles/{{(datasource "config").dataVol1}}"
+    deploy:
+      mode: replicated
+      replicas: 1
+      endpoint_mode: dnsrr
     environment:
       - bind_gateway={{(datasource "bind").bind_gateway}}
+      - bind_ingress={{(datasource "bind").bind_ingress}}
       - LGSM_PORT={{(datasource "config").port}}
       - LGSM_MAXPLAYERS={{(datasource "config").maxplayers}}
