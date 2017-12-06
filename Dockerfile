@@ -15,7 +15,8 @@ RUN apt-get update \
                        apt-transport-https \
                        ca-certificates \
                        curl \
-                       software-properties-common
+                       software-properties-common \
+                       netcat
 
 RUN curl -fsSL https://download.docker.com/linux/ubuntu/gpg | apt-key add - \
  && add-apt-repository "deb [arch=amd64] https://download.docker.com/linux/ubuntu xenial stable" \
@@ -26,7 +27,7 @@ RUN curl -fsSL https://download.docker.com/linux/ubuntu/gpg | apt-key add - \
 COPY templates /opt/OGP/templates
 
 COPY OGP-Agent-Linux /opt/agent
-RUN apt-get install -y netcat vim
+
 ADD docker-health.sh /docker-health.sh
 
 RUN chmod +x /docker-health.sh
