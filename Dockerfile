@@ -1,6 +1,6 @@
 FROM joshhsoj1902/docker-ogpagent
 
-MAINTAINER joshhsoj1902
+ENV OGP_LISTEN_PORT=12679
 
 ADD ogpmanager.sh /usr/local/bin/
 RUN mv /usr/local/bin/ogpmanager.sh /usr/local/bin/ogpmanager \
