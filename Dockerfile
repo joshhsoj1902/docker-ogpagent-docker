@@ -1,7 +1,5 @@
 FROM joshhsoj1902/docker-ogpagent
 
-MAINTAINER joshhsoj1902
-
 ADD ogpmanager.sh /usr/local/bin/
 RUN mv /usr/local/bin/ogpmanager.sh /usr/local/bin/ogpmanager \
     && chmod +x /usr/local/bin/ogpmanager

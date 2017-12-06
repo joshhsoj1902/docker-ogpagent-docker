@@ -1011,8 +1011,7 @@ sub stop_server_without_decrypt
 	my ($home_id, $server_ip, $server_port, $control_protocol,
 		$control_password, $control_type, $home_path) = @_;
 
-#   my $docker_run_command = 'docker stack rm ' . $home_id;
-  my $docker_run_command = 'docker service scale' . $home_id . '_game=0 ';
+  my $docker_run_command = 'sudo docker service scale ' . $home_id . '_game=0';
   logger 'docker command: ' . $docker_run_command;
   sudo_exec_without_decrypt($docker_run_command);
   return 0;
