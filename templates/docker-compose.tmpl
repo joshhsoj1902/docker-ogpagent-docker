@@ -15,8 +15,6 @@ services:
       - "/home/steam/linuxgsm/logs"
       - "/home/steam/linuxgsm/serverfiles/{{(datasource "config").dataVol1}}"
     deploy:
-#      placement:
-#        constraints: [node.role == manager]
       mode: replicated
       replicas: 1
       endpoint_mode: dnsrr
