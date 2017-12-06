@@ -662,14 +662,23 @@ sub is_screen_running_without_decrypt
   logger '$service_name ' .  $service_name;
 
   my $docker_service = `sudo docker service ls --format='{{.Name}}' | grep -oh '$service_name' | wc -w`;
-
   logger 'docker_service_cmd' . $docker_service;
 
   # my $docker_replicas = sudo_exec_without_decrypt($docker_service_cmd);
 
   if ($docker_service > 0) {
-    logger 'Service running ' . $docker_service;
-    return 1;
+    my $docker_service_replicas = `sudo docker service inspect --format='{{.Spec.Mode.Replicated.Replicas}} '$service_name' `;
+    logger 'docker_service_cmd' . $docker_service_replicas;
+
+	if ($docker_service_replicas > 0) {
+	  logger 'Service running ' . $docker_service_replicas;
+      return 1;
+	}
+	else
+	{
+	  logger 'Service has no replicas ' . $docker_service_replicas;
+      return 0;
+	}
   }
   else
   {
