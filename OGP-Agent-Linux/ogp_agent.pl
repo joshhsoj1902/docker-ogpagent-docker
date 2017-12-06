@@ -667,7 +667,7 @@ sub is_screen_running_without_decrypt
   # my $docker_replicas = sudo_exec_without_decrypt($docker_service_cmd);
 
   if ($docker_service > 0) {
-    my $docker_service_replicas = `sudo docker service inspect --format='{{.Spec.Mode.Replicated.Replicas}} '$service_name' `;
+    my $docker_service_replicas = `sudo docker service inspect --format='{{.Spec.Mode.Replicated.Replicas}} $service_name `;
     logger 'docker_service_cmd' . $docker_service_replicas;
 
 	if ($docker_service_replicas > 0) {
