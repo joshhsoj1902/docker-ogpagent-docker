@@ -661,28 +661,14 @@ sub is_screen_running_without_decrypt
   my $service_name = $home_id . '_game';
   logger '$service_name ' .  $service_name;
 
-  my $docker_service = `sudo docker service ls --format='{{.Name}}' | grep -oh '$service_name' | wc -w`;
-  logger 'docker_service_cmd' . $docker_service;
+  my $docker_service_running = `sudo ./helpers/isServiceRunning.sh '$service_name'`;
+  logger 'docker_service_running' . $docker_service_running;
 
-  # my $docker_replicas = sudo_exec_without_decrypt($docker_service_cmd);
-
-  if ($docker_service > 0) {
-    my $docker_service_replicas = `sudo docker service inspect --format='{{.Spec.Mode.Replicated.Replicas}}' $service_name `;
-    logger 'docker_service_cmd ' . $docker_service_replicas;
-
-	if ($docker_service_replicas > 0) {
-	  logger 'Service running ' . $docker_service_replicas;
-      return 1;
-	}
-	else
-	{
-	  logger 'Service has no replicas ' . $docker_service_replicas;
-      return 0;
-	}
+  if ($docker_service_running > 0) {
+    return 1;
   }
   else
   {
-    logger 'Service is not up ' . $docker_service;
     return 0;
   }
 }
@@ -1020,10 +1006,14 @@ sub stop_server_without_decrypt
 	my ($home_id, $server_ip, $server_port, $control_protocol,
 		$control_password, $control_type, $home_path) = @_;
 
-  my $docker_run_command = 'sudo docker service scale ' . $home_id . '_game=0';
-  logger 'docker command: ' . $docker_run_command;
-  sudo_exec_without_decrypt($docker_run_command);
-  return 0;
+  	my $service_name = $home_id . '_game';
+  	logger '$service_name ' .  $service_name;
+
+  	my $docker_run_command = `sudo ./helpers/serviceScale.sh '$service_name' 0`;
+	# my $docker_run_command = 'sudo docker service scale ' . $home_id . '_game=0';
+	logger 'docker command: ' . $docker_run_command;
+	sudo_exec_without_decrypt($docker_run_command);
+	return 0;
 }
 
 ##### Send RCON command
