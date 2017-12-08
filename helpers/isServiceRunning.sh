@@ -9,9 +9,9 @@ echo 'service count' $service_count
 if [ "$service_count" -gt "0"]
 then
     service_replicas = $(sudo docker service inspect --format='{{.Spec.Mode.Replicated.Replicas}}' $service_name)
-
+    echo 1
 else
-
+    echo 0
 fi
 
 #   if ($service_count > 0) {
