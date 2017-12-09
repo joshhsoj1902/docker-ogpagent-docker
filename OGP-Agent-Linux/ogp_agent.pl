@@ -1634,7 +1634,7 @@ sub start_docker_install
 
 	my ($home_id) = @_;
 
-	my $docker_run_command = `sudo ./helpers/setupHome.sh '$home_id'`;
+	my $docker_run_command = `sudo ./helpers/setupHome.sh 'GAME_DIR $home_id'`;
 	logger 'docker command: ' . $docker_run_command;
 	sudo_exec_without_decrypt($docker_run_command);
     return 1;

@@ -1,7 +1,11 @@
 #!/bin/bash
 
 home_id=$1
-game_instance_dir=$OGP_GAME_DIR/$home_id
+game_dir=$2
+game_instance_dir=$game_dir/$home_id
+
+echo 'homeid: '$home_id
+echo 'game dir: '$game_instance_dir
 
 mkdir -p $game_instance_dir
 touch $game_instance_dir'/docker-environment.yml'
