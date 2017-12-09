@@ -13,4 +13,7 @@ echo 'The bindGW '$bind_gateway
 
 chmod +x /opt/OGP/ogp_agent_run
 echo "Starting DockerOGP"
+
+tail -F /opt/OGP/ogp_agent.log &
+
 su ogp_agent -c "cd /opt/OGP/; ./ogp_agent_run"
