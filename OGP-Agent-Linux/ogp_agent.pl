@@ -1010,7 +1010,6 @@ sub stop_server_without_decrypt
   	logger '$service_name ' .  $service_name;
 
   	my $docker_run_command = `sudo ./helpers/scaleService.sh '$service_name' 0`;
-	# my $docker_run_command = 'sudo docker service scale ' . $home_id . '_game=0';
 	logger 'docker command: ' . $docker_run_command;
 	sudo_exec_without_decrypt($docker_run_command);
 	return 0;
@@ -1634,6 +1633,12 @@ sub start_docker_install
   #TODO: This function should create the directory and copy the base docker-compose file into Place
 
 	my ($home_id) = @_;
+
+	my $docker_run_command = `sudo ./helpers/setupHome.sh '$home_id'`;
+	logger 'docker command: ' . $docker_run_command;
+	sudo_exec_without_decrypt($docker_run_command);
+    return 1
+
 
   logger "=================================";
   logger "HOME_id $home_id";
