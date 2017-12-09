@@ -1637,7 +1637,7 @@ sub start_docker_install
 	my $docker_run_command = `sudo ./helpers/setupHome.sh '$home_id'`;
 	logger 'docker command: ' . $docker_run_command;
 	sudo_exec_without_decrypt($docker_run_command);
-    return 1
+    return 1;
 
 
   logger "=================================";
