@@ -2,7 +2,6 @@ FROM joshhsoj1902/docker-ogpagent
 
 ENV OGP_LISTEN_PORT=12679
 ENV OGP_GAME_DIR=/opt/games/
-ENV OGP_INSTALL_DIR=/opt/OGP/
 
 
 ADD ogpmanager.sh /usr/local/bin/
