@@ -1010,7 +1010,6 @@ sub stop_server_without_decrypt
   	logger '$service_name ' .  $service_name;
 
   	my $docker_run_command = `sudo ./helpers/scaleService.sh '$service_name' 0`;
-	# my $docker_run_command = 'sudo docker service scale ' . $home_id . '_game=0';
 	logger 'docker command: ' . $docker_run_command;
 	sudo_exec_without_decrypt($docker_run_command);
 	return 0;
@@ -1631,44 +1630,13 @@ sub start_rsync_install
 
 sub start_docker_install
 {
-  #TODO: This function should create the directory and copy the base docker-compose file into Place
-
+    #TODO: This function should create the directory and copy the base docker-compose file into Place
 	my ($home_id) = @_;
 
-  logger "=================================";
-  logger "HOME_id $home_id";
-  logger "=================================";
-
-  my $game_instance_dir = get_game_instance_dir($home_id);
-
-  #TODO: all this sudo is crazy :(
-  my $mkdir_cmd='mkdir -p ' . $game_instance_dir;
-  sudo_exec_without_decrypt($mkdir_cmd);
-
-  my $touch_cmd='touch ' . $game_instance_dir . '/docker-environment.yml';
-  sudo_exec_without_decrypt($touch_cmd);
-
-  $touch_cmd='touch ' . $game_instance_dir . '/docker-config.yml';
-  sudo_exec_without_decrypt($touch_cmd);
-
-  $touch_cmd='touch ' . $game_instance_dir . '/docker-test.yml';
-  sudo_exec_without_decrypt($touch_cmd);
-
-  my $chmod_cmd='chmod 777 -R ' . $game_instance_dir;
-  sudo_exec_without_decrypt($chmod_cmd);
-
-  #Till we have gomplate
-  sudo_exec_without_decrypt('cp /opt/OGP/docker-compose.gmod.yml ' . $game_instance_dir);
-
-  return 1
-}
-
-sub get_game_instance_dir
-{
-  my ($home_id) = @_;
-  my $game_instance_dir = GAME_DIR . '/' . $home_id;
-  return $game_instance_dir
-
+	my $docker_run_command = 'sudo ./helpers/setupHome.sh ' . GAME_DIR . ' ' . $home_id;
+	logger 'docker command: ' . $docker_run_command;
+	sudo_exec_without_decrypt($docker_run_command);
+    return 1;
 }
 
 
