@@ -1009,7 +1009,7 @@ sub stop_server_without_decrypt
   	my $service_name = $home_id . '_game';
   	logger '$service_name ' .  $service_name;
 
-  	my $docker_run_command = `sudo ./helpers/serviceScale.sh '$service_name' 0`;
+  	my $docker_run_command = `sudo ./helpers/scaleService.sh '$service_name' 0`;
 	# my $docker_run_command = 'sudo docker service scale ' . $home_id . '_game=0';
 	logger 'docker command: ' . $docker_run_command;
 	sudo_exec_without_decrypt($docker_run_command);
