@@ -1,7 +1,7 @@
 #!/bin/bash
 
-home_id=$1
-game_dir=$2
+game_dir=$1
+home_id=$2
 game_instance_dir=$game_dir/$home_id
 
 echo 'homeid: '$home_id
