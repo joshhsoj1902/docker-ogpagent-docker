@@ -1,6 +1,8 @@
 FROM joshhsoj1902/docker-ogpagent
 
 ENV OGP_LISTEN_PORT=12679
+ENV OGP_GAME_DIR=/opt/games/
+
 
 ADD ogpmanager.sh /usr/local/bin/
 RUN mv /usr/local/bin/ogpmanager.sh /usr/local/bin/ogpmanager \
@@ -32,7 +34,7 @@ ADD docker-health.sh /docker-health.sh
 
 RUN chmod +x /docker-health.sh
 
-RUN cd /opt/agent && cp -avf systemd Crypt EHCP FastDownload File Frontier IspConfig KKrcon php-query Schedule Time ogp_agent.pl ogp_screenrc ogp_agent_run docker-compose.gmod.yml agent_conf.sh extPatterns.txt /opt/OGP/
+RUN cd /opt/agent && cp -avf helpers systemd Crypt EHCP FastDownload File Frontier IspConfig KKrcon php-query Schedule Time ogp_agent.pl ogp_screenrc ogp_agent_run docker-compose.gmod.yml agent_conf.sh extPatterns.txt /opt/OGP/
 
 RUN chown --preserve-root -R ogp_agent /opt/OGP/
 
