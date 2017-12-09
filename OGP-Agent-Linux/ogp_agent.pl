@@ -661,7 +661,7 @@ sub is_screen_running_without_decrypt
   my $service_name = $home_id . '_game';
   logger '$service_name ' .  $service_name;
 
-  my $docker_service_running = `sudo /opt/OGP/helpers/isServiceRunning.sh '$service_name'`;
+  my $docker_service_running = `sudo ./helpers/isServiceRunning.sh '$service_name'`;
   logger 'docker_service_running' . $docker_service_running;
 
   if ($docker_service_running > 0) {
