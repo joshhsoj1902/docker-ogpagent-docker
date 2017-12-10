@@ -18,6 +18,9 @@ services:
       mode: replicated
       replicas: 1
       endpoint_mode: dnsrr
+      placement:
+        constraints:
+          - node.labels.games == true
     environment:
       - bind_gateway={{(datasource "bind").bind_gateway}}
       - bind_ingress={{(datasource "bind").bind_ingress}}

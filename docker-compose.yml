@@ -26,3 +26,4 @@ services:
       - OGP_FTP_METHOD=PureFTPd
       - OGP_AUTORESTART_SERVER=1
       - OGP_DOCKER_NAMESPACE=joshhsoj1902
+      - OGP_SWARM_LABEL=games  #TODO: Make this actually do something (it's actually hardcoded)
