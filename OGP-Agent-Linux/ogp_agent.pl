@@ -661,10 +661,10 @@ sub is_screen_running_without_decrypt
   my $service_name = $home_id . '_game';
   logger '$service_name ' .  $service_name;
 
-  my $docker_service_running = `sudo ./helpers/isServiceRunning.sh '$service_name'`;
-  logger 'docker_service_running' . $docker_service_running;
+  my $is_service_running = `sudo ./helpers/isServiceRunning.sh '$service_name'`;
+  logger 'is_service_running' . $is_service_running;
 
-  if ($docker_service_running > 0) {
+  if ($is_service_running > 0) {
     return 1;
   }
   else
@@ -688,22 +688,11 @@ sub deleteStoppedStatFile
 
 sub gomplate_compose
 {
-  my ($game_instance_dir) = @_;
+  my ($home_id) = @_;
 
-  my $gomplate = '/usr/local/bin/gomplate';
-  my $configdatasource = 'config=file://' . $game_instance_dir . '/docker-config.yml';
-  my $binddatasource = 'bind=file://' . '/opt/OGP/Cfg/bind.yml';
-  my $template = '/opt/OGP/templates/docker-compose.tmpl';
-  my $output = $game_instance_dir . '/docker-compose.yml';
-
-  my $gomplate_cmd = $gomplate . ' -d ' . $configdatasource . ' -d ' . $binddatasource . ' -f ' . $template . ' -o ' . $output;
-
-  logger 'The gomplate command: ' . $gomplate_cmd;
-
-  sudo_exec_without_decrypt($gomplate_cmd);
-
-  my $append_env_cmd = 'cat ' . $game_instance_dir . '/docker-environment.yml >> ' . $output;
-  sudo_exec_without_decrypt($append_env_cmd);
+	my $cmd = 'sudo ./helpers/gomplateSetup.sh ' . GAME_DIR . ' ' . $home_id;
+	logger 'gomplate command: ' . $cmd;
+	sudo_exec_without_decrypt($cmd);
 
   return 1;
 }
@@ -759,11 +748,11 @@ sub universal_start_without_decrypt
     return 0;
   }
 
-  gomplate_compose($game_instance_dir);
+  gomplate_compose($home_id);
 
-  my $docker_run_command = 'docker stack deploy -c ' . $game_instance_dir . '/docker-compose.yml ' . $home_id;
-  logger 'docker command: ' . $docker_run_command;
-  sudo_exec_without_decrypt($docker_run_command);
+  my $cmd = 'sudo ./helpers/startService.sh ' . GAME_DIR . ' ' . $home_id;
+  logger 'start command: ' . $cmd;
+  sudo_exec_without_decrypt($cmd);
 
   return 1;
 
@@ -883,16 +872,11 @@ sub rfile_exists
   if (index($checkFile, 'startups') != -1) {
      logger 'Its a health check, say its down!';
      return 1;
-     #my $docker_replicas = `sudo docker service inspect --format='{{.Spec.Mode.Replicated.Replicas}}' $service_name`;
   }
   else
   {
     return 0;
   }
-
-
-
-# docker service ls --format "{{.PORTS}}"
 
 	if (-e $checkFile)
 	{
@@ -1633,9 +1617,9 @@ sub start_docker_install
     #TODO: This function should create the directory and copy the base docker-compose file into Place
 	my ($home_id) = @_;
 
-	my $docker_run_command = 'sudo ./helpers/setupHome.sh ' . GAME_DIR . ' ' . $home_id;
-	logger 'docker command: ' . $docker_run_command;
-	sudo_exec_without_decrypt($docker_run_command);
+	my $cmd = 'sudo ./helpers/setupHome.sh ' . GAME_DIR . ' ' . $home_id;
+	logger 'docker command: ' . $cmd;
+	sudo_exec_without_decrypt($cmd);
     return 1;
 }
 
