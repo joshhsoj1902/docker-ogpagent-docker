@@ -1,9 +1,5 @@
 #!/bin/bash
 
-{{if (getenv "OGP_DOCKER_NAMESPACE")}}{{.Env.OGP_DOCKER_NAMESPACE}}{{else}}{{(datasource "config").namespace}}{{end}}
-/{{(datasource "config").image}}:
-{{(datasource "config").version}}
-
 configNameSpace={{(datasource "config").namespace}}
 configImage={{(datasource "config").image}}
 configVersion={{(datasource "config").version}}
