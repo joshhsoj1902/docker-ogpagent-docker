@@ -694,21 +694,6 @@ sub gomplate_compose
 	logger 'gomplate command: ' . $cmd;
 	sudo_exec_without_decrypt($cmd);
 
-#   my $gomplate = '/usr/local/bin/gomplate';
-#   my $configdatasource = 'config=file://' . $game_instance_dir . '/docker-config.yml';
-#   my $binddatasource = 'bind=file://' . '/opt/OGP/Cfg/bind.yml';
-#   my $template = '/opt/OGP/templates/docker-compose.tmpl';
-#   my $output = $game_instance_dir . '/docker-compose.yml';
-
-#   my $gomplate_cmd = $gomplate . ' -d ' . $configdatasource . ' -d ' . $binddatasource . ' -f ' . $template . ' -o ' . $output;
-
-#   logger 'The gomplate command: ' . $gomplate_cmd;
-
-#   sudo_exec_without_decrypt($gomplate_cmd);
-
-#   my $append_env_cmd = 'cat ' . $game_instance_dir . '/docker-environment.yml >> ' . $output;
-#   sudo_exec_without_decrypt($append_env_cmd);
-
   return 1;
 }
 
@@ -766,12 +751,8 @@ sub universal_start_without_decrypt
   gomplate_compose($home_id);
 
   my $cmd = 'sudo ./helpers/startService.sh ' . GAME_DIR . ' ' . $home_id;
-  logger 'docker command: ' . $cmd;
+  logger 'start command: ' . $cmd;
   sudo_exec_without_decrypt($cmd);
-
-#   my $docker_run_command = 'docker stack deploy -c ' . $game_instance_dir . '/docker-compose.yml ' . $home_id;
-#   logger 'docker command: ' . $docker_run_command;
-#   sudo_exec_without_decrypt($docker_run_command);
 
   return 1;
 
@@ -891,16 +872,11 @@ sub rfile_exists
   if (index($checkFile, 'startups') != -1) {
      logger 'Its a health check, say its down!';
      return 1;
-     #my $docker_replicas = `sudo docker service inspect --format='{{.Spec.Mode.Replicated.Replicas}}' $service_name`;
   }
   else
   {
     return 0;
   }
-
-
-
-# docker service ls --format "{{.PORTS}}"
 
 	if (-e $checkFile)
 	{
