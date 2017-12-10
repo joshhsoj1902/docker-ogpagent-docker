@@ -661,10 +661,10 @@ sub is_screen_running_without_decrypt
   my $service_name = $home_id . '_game';
   logger '$service_name ' .  $service_name;
 
-  my $docker_service_running = `sudo ./helpers/isServiceRunning.sh '$service_name'`;
-  logger 'docker_service_running' . $docker_service_running;
+  my $is_service_running = `sudo ./helpers/isServiceRunning.sh '$service_name'`;
+  logger 'is_service_running' . $is_service_running;
 
-  if ($docker_service_running > 0) {
+  if ($is_service_running > 0) {
     return 1;
   }
   else
@@ -690,9 +690,9 @@ sub gomplate_compose
 {
   my ($home_id) = @_;
 
-	my $docker_run_command = 'sudo ./helpers/gomplateSetup.sh ' . GAME_DIR . ' ' . $home_id;
-	logger 'docker command: ' . $docker_run_command;
-	sudo_exec_without_decrypt($docker_run_command);
+	my $cmd = 'sudo ./helpers/gomplateSetup.sh ' . GAME_DIR . ' ' . $home_id;
+	logger 'gomplate command: ' . $cmd;
+	sudo_exec_without_decrypt($cmd);
 
 #   my $gomplate = '/usr/local/bin/gomplate';
 #   my $configdatasource = 'config=file://' . $game_instance_dir . '/docker-config.yml';
@@ -765,9 +765,13 @@ sub universal_start_without_decrypt
 
   gomplate_compose($home_id);
 
-  my $docker_run_command = 'docker stack deploy -c ' . $game_instance_dir . '/docker-compose.yml ' . $home_id;
-  logger 'docker command: ' . $docker_run_command;
-  sudo_exec_without_decrypt($docker_run_command);
+  my $cmd = 'sudo ./helpers/startService.sh ' . GAME_DIR . ' ' . $home_id;
+  logger 'docker command: ' . $cmd;
+  sudo_exec_without_decrypt($cmd);
+
+#   my $docker_run_command = 'docker stack deploy -c ' . $game_instance_dir . '/docker-compose.yml ' . $home_id;
+#   logger 'docker command: ' . $docker_run_command;
+#   sudo_exec_without_decrypt($docker_run_command);
 
   return 1;
 
@@ -1637,9 +1641,9 @@ sub start_docker_install
     #TODO: This function should create the directory and copy the base docker-compose file into Place
 	my ($home_id) = @_;
 
-	my $docker_run_command = 'sudo ./helpers/setupHome.sh ' . GAME_DIR . ' ' . $home_id;
-	logger 'docker command: ' . $docker_run_command;
-	sudo_exec_without_decrypt($docker_run_command);
+	my $cmd = 'sudo ./helpers/setupHome.sh ' . GAME_DIR . ' ' . $home_id;
+	logger 'docker command: ' . $cmd;
+	sudo_exec_without_decrypt($cmd);
     return 1;
 }
 
