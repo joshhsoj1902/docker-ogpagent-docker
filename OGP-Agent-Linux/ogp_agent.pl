@@ -690,6 +690,10 @@ sub gomplate_compose
 {
   my ($home_id) = @_;
 
+	my $installCmd = 'sudo ./helpers/gomplateInstallSetup.sh ' . GAME_DIR . ' ' . $home_id;
+	logger 'gomplate command: ' . $installCmd;
+	sudo_exec_without_decrypt($installCmd);
+
 	my $cmd = 'sudo ./helpers/gomplateSetup.sh ' . GAME_DIR . ' ' . $home_id;
 	logger 'gomplate command: ' . $cmd;
 	sudo_exec_without_decrypt($cmd);
@@ -749,6 +753,10 @@ sub universal_start_without_decrypt
   }
 
   gomplate_compose($home_id);
+
+  my $installImageCmd = 'sudo ./helpers/doLocalInstall.sh ' . GAME_DIR . ' ' . $home_id;
+  logger 'start command: ' . $installImageCmd;
+  sudo_exec_without_decrypt($installImageCmd);
 
   my $cmd = 'sudo ./helpers/startService.sh ' . GAME_DIR . ' ' . $home_id;
   logger 'start command: ' . $cmd;
