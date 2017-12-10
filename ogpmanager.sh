@@ -1,6 +1,7 @@
 #!/bin/bash
 
 /usr/local/bin/gomplate -f /opt/OGP/templates/Config.pm.tmpl -o /opt/OGP/Cfg/Config.pm
+/usr/local/bin/gomplate -f /opt/OGP/templates/Config.tmpl.yml -o /opt/OGP/Cfg/Config.yml
 /usr/local/bin/gomplate -f /opt/OGP/templates/Preferences.pm.tmpl -o /opt/OGP/Cfg/Preferences.pm
 
 bind_ingress=`docker network inspect --format='{{ (index .IPAM.Config 0).Gateway }}' ingress`

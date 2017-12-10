@@ -1,0 +1,2 @@
+{{if (getenv "OGP_DOCKER_NAMESPACE")}}docker_hub_namespace={{.Env.OGP_DOCKER_NAMESPACE}}{{end}}
+{{if (getenv "OGP_GCLOUD_NAMESPACE")}}docker_gcloud_namespace={{.Env.OGP_GCLOUD_NAMESPACE}}{{end}}
