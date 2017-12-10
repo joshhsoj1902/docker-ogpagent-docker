@@ -1,5 +1,20 @@
 version: '3.2'
+secrets:
+  gcloud:
+    external: true
 services:
+  gcloud:
+    image: joshhsoj1902/google-cloud-sdk-docker:latest
+    secrets:
+      - gcloud
+    deploy:
+      mode: global
+      placement:
+        constraints:
+          - node.labels.games == true
+      restart_policy:
+        condition: none
+    
   game:
     image: {{if (getenv "OGP_DOCKER_NAMESPACE")}}{{.Env.OGP_DOCKER_NAMESPACE}}{{else}}{{(datasource "config").namespace}}{{end}}/{{(datasource "config").image}}:{{(datasource "config").version}}
     ports:

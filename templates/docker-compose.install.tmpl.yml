@@ -1,0 +1,20 @@
+version: '3.2'
+secrets:
+  gcloud:
+    external: true
+services:
+  gcloud:
+    image: joshhsoj1902/google-cloud-sdk-docker:latest
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    secrets:
+      - gcloud
+    deploy:
+      mode: global
+      placement:
+        constraints:
+          - node.labels.games == true
+      restart_policy:
+        condition: none
+    command: sh -c "gcloud auth activate-service-account --key-file=/run/secrets/gcloud && gcloud docker -- pull"
+    
