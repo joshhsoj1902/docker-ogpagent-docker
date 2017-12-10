@@ -4,9 +4,8 @@ configNameSpace={{(datasource "config").namespace}}
 configImage={{(datasource "config").image}}
 configVersion={{(datasource "config").version}}
 
-dockerNameSpace={{if ((datasource "globalConfig").docker_hub_namespace)}}(datasource "globalConfig").docker_hub_namespace{{else}}{{end}}
-gcloudNamespace={{if ((datasource "globalConfig").docker_gcloud_namespace)}}(datasource "globalConfig").docker_gcloud_namespace{{else}}{{end}}
-
+dockerNameSpace={{(datasource "globalConfig").docker_hub_namespace}}
+gcloudNamespace={{(datasource "globalConfig").docker_gcloud_namespace}}
 
 if [ ${#dockerNameSpace} -gt 0 ] && [ "$configNameSpace" = "$dockerNameSpace" ]; then
     exit 0
