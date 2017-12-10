@@ -688,22 +688,26 @@ sub deleteStoppedStatFile
 
 sub gomplate_compose
 {
-  my ($game_instance_dir) = @_;
+  my ($home_id) = @_;
 
-  my $gomplate = '/usr/local/bin/gomplate';
-  my $configdatasource = 'config=file://' . $game_instance_dir . '/docker-config.yml';
-  my $binddatasource = 'bind=file://' . '/opt/OGP/Cfg/bind.yml';
-  my $template = '/opt/OGP/templates/docker-compose.tmpl';
-  my $output = $game_instance_dir . '/docker-compose.yml';
+	my $docker_run_command = 'sudo ./helpers/gomplateSetup.sh ' . GAME_DIR . ' ' . $home_id;
+	logger 'docker command: ' . $docker_run_command;
+	sudo_exec_without_decrypt($docker_run_command);
 
-  my $gomplate_cmd = $gomplate . ' -d ' . $configdatasource . ' -d ' . $binddatasource . ' -f ' . $template . ' -o ' . $output;
+#   my $gomplate = '/usr/local/bin/gomplate';
+#   my $configdatasource = 'config=file://' . $game_instance_dir . '/docker-config.yml';
+#   my $binddatasource = 'bind=file://' . '/opt/OGP/Cfg/bind.yml';
+#   my $template = '/opt/OGP/templates/docker-compose.tmpl';
+#   my $output = $game_instance_dir . '/docker-compose.yml';
 
-  logger 'The gomplate command: ' . $gomplate_cmd;
+#   my $gomplate_cmd = $gomplate . ' -d ' . $configdatasource . ' -d ' . $binddatasource . ' -f ' . $template . ' -o ' . $output;
 
-  sudo_exec_without_decrypt($gomplate_cmd);
+#   logger 'The gomplate command: ' . $gomplate_cmd;
 
-  my $append_env_cmd = 'cat ' . $game_instance_dir . '/docker-environment.yml >> ' . $output;
-  sudo_exec_without_decrypt($append_env_cmd);
+#   sudo_exec_without_decrypt($gomplate_cmd);
+
+#   my $append_env_cmd = 'cat ' . $game_instance_dir . '/docker-environment.yml >> ' . $output;
+#   sudo_exec_without_decrypt($append_env_cmd);
 
   return 1;
 }
@@ -759,7 +763,7 @@ sub universal_start_without_decrypt
     return 0;
   }
 
-  gomplate_compose($game_instance_dir);
+  gomplate_compose($home_id);
 
   my $docker_run_command = 'docker stack deploy -c ' . $game_instance_dir . '/docker-compose.yml ' . $home_id;
   logger 'docker command: ' . $docker_run_command;
