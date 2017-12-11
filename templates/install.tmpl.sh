@@ -15,6 +15,8 @@ fi
 
 if [ ${#gcloudNamespace} -gt 0 ] && [ "$configNamespace" = "$gcloudNamespace" ]; then
     echo "Using gcloud"
+    docker stack rm $home_id'_install';
+    sleep 10;
     docker stack deploy -c docker-compose.install.yml $home_id'_install';
     exit 0
     # image will be downloaded in the background
