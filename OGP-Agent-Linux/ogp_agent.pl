@@ -1102,13 +1102,13 @@ sub parse_create_home_dir
 {
 	my ( $path ) = @_;
 
-	my $game_dir = GAME_DIR
+	my $game_dir = GAME_DIR;
 
 	my $home_id = `sudo ./helpers/getHomeId.sh '$game_dir' '$path'`;
   	logger 'home_id' . $home_id;
 	  if ( ($home_id ne "0") && ($home_id > 0))
   	  { 
-			logger 'home_id IS VALID'
+			logger 'home_id IS VALID';
 			create_home_dir($home_id);
   	  }
 
@@ -1128,7 +1128,7 @@ sub writefile
 
 
   $writefile = map_filepath($writefile);
-  parse_create_home_dir($writefile)
+  parse_create_home_dir($writefile);
   
 
   my 	$filedata2 = decode_base64($filedata);
