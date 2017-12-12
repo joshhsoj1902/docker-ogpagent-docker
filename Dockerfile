@@ -3,9 +3,11 @@ FROM alpine
 ENV OGP_LISTEN_PORT=12679
 ENV OGP_GAME_DIR=/opt/games/
 
-RUN apk --no-cache add perl docker bash gomplate netcat-openbsd sudo apkbuild-cpan
-
-RUN apkbuild-cpan Frontier::Daemon::Forking Crypt::XXTEA
+RUN apk --no-cache add perl make docker bash gomplate netcat-openbsd sudo perl-utils gcc expat-dev g++ perl-dev
+RUN cpan Log::Log4perl
+RUN cpan Frontier::Daemon::Forking
+RUN cpan Crypt::XXTEA
+RUN cpan XML::Parser
 
 RUN adduser ogp_agent -D \
     && echo 'ogp_agent ALL=(ALL) NOPASSWD:ALL' >> /etc/sudoers
