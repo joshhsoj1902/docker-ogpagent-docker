@@ -2346,269 +2346,48 @@ sub scheduler_dispatcher {
 	my $response = `$args`;
 	chomp($response);
 	my $log = "Executed command: $args";
-	if($response ne "")
-	{
-		$log .= ", response:\n$response";
-	}
-	scheduler_log_events($log);
 }
 
 sub scheduler_server_action
 {
 	my ($task, $args) = @_;
-	my ($action, @server_args) = split('\|\%\|', $args);
-	if($action eq "%ACTION=start")
-	{
-		my ($home_id, $ip, $port) = ($server_args[0], $server_args[6], $server_args[5]);
-		my $ret = universal_start_without_decrypt(@server_args);
-		if($ret == 1)
-		{
-			scheduler_log_events("Started server home ID $home_id on address $ip:$port");
-		}
-		else
-		{
-			scheduler_log_events("Failed starting server home ID $home_id on address $ip:$port (Check agent log)");
-		}
-	}
-	elsif($action eq "%ACTION=stop")
-	{
-		my ($home_id, $ip, $port) = ($server_args[0], $server_args[1], $server_args[2]);
-		my $ret = stop_server_without_decrypt(@server_args);
-		if($ret == 0)
-		{
-			scheduler_log_events("Stopped server home ID $home_id on address $ip:$port");
-		}
-		elsif($ret == 1)
-		{
-			scheduler_log_events("Failed stopping server home ID $home_id on address $ip:$port (Invalid IP:Port given)");
-		}
-	}
-	elsif($action eq "%ACTION=restart")
-	{
-		my ($home_id, $ip, $port) = ($server_args[0], $server_args[1], $server_args[2]);
-		my $ret = restart_server_without_decrypt(@server_args);
-		if($ret == 1)
-		{
-			scheduler_log_events("Restarted server home ID $home_id on address $ip:$port");
-		}
-		elsif($ret == -1)
-		{
-			scheduler_log_events("Failed restarting server home ID $home_id on address $ip:$port (Server could not be started, check agent log)");
-		}
-		elsif($ret == -2)
-		{
-			scheduler_log_events("Failed restarting server home ID $home_id on address $ip:$port (Server could not be stopped, check agent log)");
-		}
-	}
 	return 1;
-}
-
-sub scheduler_log_events
-{
-	my $logcmd	 = $_[0];
-	$logcmd = localtime() . " $logcmd\n";
-	logger "Can't open " . SCHED_LOG_FILE . " - $!" unless open(LOGFILE, '>>', SCHED_LOG_FILE);
-	logger "Failed to lock " . SCHED_LOG_FILE . "." unless flock(LOGFILE, LOCK_EX);
-	logger "Failed to seek to end of " . SCHED_LOG_FILE . "." unless seek(LOGFILE, 0, 2);
-	logger "Failed to write to " . SCHED_LOG_FILE . "." unless print LOGFILE "$logcmd";
-	logger "Failed to unlock " . SCHED_LOG_FILE . "." unless flock(LOGFILE, LOCK_UN);
-	logger "Failed to close " . SCHED_LOG_FILE . "." unless close(LOGFILE);
 }
 
 sub scheduler_add_task
 {
 	return "Bad Encryption Key" unless(decrypt_param(pop(@_)) eq "Encryption checking OK");
 	my $new_task = decrypt_param(@_);
-	if (open(TASKS, '>>', SCHED_TASKS))
-	{
-		print TASKS "$new_task\n";
-		logger "Created new task: $new_task";
-		close(TASKS);
-		scheduler_stop();
-		# Create new object with default dispatcher for scheduled tasks
-		$cron = new Schedule::Cron( \&scheduler_dispatcher, {
-												nofork => 1,
-												loglevel => 0,
-												log => sub { print $_[1], "\n"; }
-											   } );
-
-		$cron->add_entry( "* * * * * *", \&scheduler_read_tasks );
-		# Run scheduler
-		$cron->run( {detach=>1, pid_file=>SCHED_PID} );
-		return 1;
-	}
-	logger "Cannot create task: $new_task ( $! )";
-	return -1;
+	return 1;
 }
 
 sub scheduler_del_task
 {
 	return "Bad Encryption Key" unless(decrypt_param(pop(@_)) eq "Encryption checking OK");
 	my $name = decrypt_param(@_);
-	if( scheduler_read_tasks() == -1 )
-	{
-		return -1;
-	}
-	my @entries = $cron->list_entries();
-	if(open(TASKS, '>', SCHED_TASKS))
-	{
-		foreach my $task ( @entries ) {
-			next if $task->{args}[0] eq $name;
-			next unless $task->{args}[0] =~ /task_[0-9]*/;
-			if(defined $task->{args}[1])
-			{
-				print TASKS join(" ", $task->{time}, $task->{args}[1]) . "\n";
-			}
-			else
-			{
-				print TASKS $task->{time} . "\n";
-			}
-		}
-		close( TASKS );
-		scheduler_stop();
-		# Create new object with default dispatcher for scheduled tasks
-		$cron = new Schedule::Cron( \&scheduler_dispatcher, {
-												nofork => 1,
-												loglevel => 0,
-												log => sub { print $_[1], "\n"; }
-											   } );
-
-		$cron->add_entry( "* * * * * *", \&scheduler_read_tasks );
-		# Run scheduler
-		$cron->run( {detach=>1, pid_file=>SCHED_PID} );
-		return 1;
-	}
-	logger "Cannot open file " . SCHED_TASKS . " for deleting task id: $name ( $! )",1;
-	return -1;
+	return 1;
 }
 
 sub scheduler_edit_task
 {
-	return "Bad Encryption Key" unless(decrypt_param(pop(@_)) eq "Encryption checking OK");
-	my ($name, $new_task) = decrypt_params(@_);
-	if( scheduler_read_tasks() == -1 )
-	{
-		return -1;
-	}
-	my @entries = $cron->list_entries();
-	if(open(TASKS, '>', SCHED_TASKS))
-	{
-		foreach my $task ( @entries ) {
-			next unless $task->{args}[0] =~ /task_[0-9]*/;
-			if($name eq $task->{args}[0])
-			{
-				print TASKS "$new_task\n";
-			}
-			else
-			{
-				if(defined $task->{args}[1])
-				{
-					print TASKS join(" ", $task->{time}, $task->{args}[1]) . "\n";
-				}
-				else
-				{
-					print TASKS $task->{time} . "\n";
-				}
-			}
-		}
-		close( TASKS );
-		scheduler_stop();
-		# Create new object with default dispatcher for scheduled tasks
-		$cron = new Schedule::Cron( \&scheduler_dispatcher, {
-												nofork => 1,
-												loglevel => 0,
-												log => sub { print $_[1], "\n"; }
-											   } );
-
-		$cron->add_entry( "* * * * * *", \&scheduler_read_tasks );
-		# Run scheduler
-		$cron->run( {detach=>1, pid_file=>SCHED_PID} );
-		return 1;
-	}
-	logger "Cannot open file " . SCHED_TASKS . " for editing task id: $name ( $! )",1;
-	return -1;
+	return 1;
 }
 
 sub scheduler_read_tasks
 {
-	if( open(TASKS, '<', SCHED_TASKS) )
-	{
-		$cron->clean_timetable();
-	}
-	else
-	{
-		logger "Error reading tasks file $!";
-		scheduler_stop();
-		return -1;
-	}
-
-	my $i = 0;
-	while (<TASKS>)
-	{
-		next if $_ =~ /^(#.*|[\s|\t]*?\n)/;
-		my ($minute, $hour, $dayOfTheMonth, $month, $dayOfTheWeek, @args) = split(' ', $_);
-		my $time = "$minute $hour $dayOfTheMonth $month $dayOfTheWeek";
-		if("@args" =~ /^\%ACTION.*/)
-		{
-			$cron->add_entry($time, \&scheduler_server_action, 'task_' . $i++, "@args");
-		}
-		else
-		{
-			$cron->add_entry($time, 'task_' . $i++, "@args");
-		}
-	}
-	close(TASKS);
 	return 1;
 }
 
 sub scheduler_stop
 {
-	my $pid;
-	if(open(PIDFILE, '<', SCHED_PID))
-	{
-		$pid = <PIDFILE>;
-		chomp $pid;
-		close(PIDFILE);
-		if($pid ne "")
-		{
-			if( kill 0, $pid )
-			{
-				my $cnt = kill 9, $pid;
-				if ($cnt == 1)
-				{
-					unlink SCHED_PID;
-					return 1;
-				}
-			}
-		}
-	}
-	return -1;
+	return 1;
 }
 
 sub scheduler_list_tasks
 {
 	return "Bad Encryption Key" unless(decrypt_param(pop(@_)) eq "Encryption checking OK");
-	if( scheduler_read_tasks() == -1 )
-	{
-		return -1;
-	}
-	my @entries = $cron->list_entries();
-	my %entries_array;
-	foreach my $task ( @entries ) {
-		if( defined $task->{args}[1] )
-		{
-			$entries_array{$task->{args}[0]} = encode_base64(join(" ", $task->{time}, $task->{args}[1]));
-		}
-		else
-		{
-			$entries_array{$task->{args}[0]} = encode_base64($task->{time});
-		}
-	}
-	if( %entries_array )
-	{
-		return {%entries_array};
-	}
-	return -1;
+	my %entries_array = ("Foo");
+	return {%entries_array};
 }
 
 sub get_file_part
