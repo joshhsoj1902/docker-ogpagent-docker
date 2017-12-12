@@ -42,7 +42,6 @@ use Path::Class::File;	# Used to handle files and directories.
 use File::Path qw(mkpath);
 use Archive::Extract;	 # Used to handle archived files.
 use File::Find;
-use Schedule::Cron; # Used for scheduling tasks
 
 # Compression tools
 use IO::Compress::Bzip2 qw(bzip2 $Bzip2Error); # Used to compress files to bz2.
@@ -263,19 +262,6 @@ logger "Open Game Panel - Agent started - "
   . " - port "
   . AGENT_PORT
   . " - PID $$", 1;
-
-# Stop previous scheduler process if exists
-scheduler_stop();
-# Create new object with default dispatcher for scheduled tasks
-my $cron = new Schedule::Cron( \&scheduler_dispatcher, {
-                                        nofork => 1,
-                                        loglevel => 0,
-                                        log => sub { print $_[1], "\n"; }
-                                       } );
-
-$cron->add_entry( "* * * * * *", \&scheduler_read_tasks );
-# Run scheduler
-$cron->run( {detach=>1, pid_file=>SCHED_PID} );
 
 if(-e Path::Class::File->new(FD_DIR, 'Settings.pm'))
 {
@@ -2340,20 +2326,6 @@ sub agent_restart
 	return -1;
 }
 
-# Subroutines to be called
-sub scheduler_dispatcher {
-	my ($task, $args) = @_;
-	my $response = `$args`;
-	chomp($response);
-	my $log = "Executed command: $args";
-}
-
-sub scheduler_server_action
-{
-	my ($task, $args) = @_;
-	return 1;
-}
-
 sub scheduler_add_task
 {
 	return "Bad Encryption Key" unless(decrypt_param(pop(@_)) eq "Encryption checking OK");
@@ -2369,16 +2341,6 @@ sub scheduler_del_task
 }
 
 sub scheduler_edit_task
-{
-	return 1;
-}
-
-sub scheduler_read_tasks
-{
-	return 1;
-}
-
-sub scheduler_stop
 {
 	return 1;
 }
