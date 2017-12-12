@@ -571,7 +571,7 @@ sub decrypt_params
 
 sub check_steam_cmd_client
 {
-	logger 'STEAM CALLED check_steam_cmd_client';
+	logger "STEAM CALLED check_steam_cmd_client";
 
 	return 1;
 }
@@ -1425,7 +1425,7 @@ sub master_server_update
 sub steam_cmd
 {
 	chomp(@_);
-	logger 'STEAM CALLED steam_cmd';
+	logger "STEAM CALLED steam_cmd";
 	
 	return "Bad Encryption Key" unless(decrypt_param(pop(@_)) eq "Encryption checking OK");
 	return steam_cmd_without_decrypt(decrypt_params(@_));
@@ -1437,7 +1437,7 @@ sub steam_cmd
 sub steam_cmd_without_decrypt
 {
 	my ($home_id, $home_path, $mod, $modname, $betaname, $betapwd, $user, $pass, $guard, $exec_folder_path, $exec_path, $precmd, $postcmd, $cfg_os, $filesToLockUnlock) = @_;
-	logger 'STEAM CALLED steam_cmd_without_decrypt';
+	logger "STEAM CALLED steam_cmd_without_decrypt";
 
 	start_docker_install($home_id);
 
@@ -1446,7 +1446,7 @@ sub steam_cmd_without_decrypt
 
 sub fetch_steam_version
 {
-	logger 'STEAM CALLED fetch_steam_version';
+	logger "STEAM CALLED fetch_steam_version";
 	
 	return "Bad Encryption Key" unless(decrypt_param(pop(@_)) eq "Encryption checking OK");
 	my ($appId, $pureOutput) = &decrypt_params(@_);
@@ -1463,7 +1463,7 @@ sub fetch_steam_version
 
 sub installed_steam_version
 {
-	logger 'STEAM CALLED installed_steam_version';
+	logger "STEAM CALLED installed_steam_version";
 	
 	return "Bad Encryption Key" unless(decrypt_param(pop(@_)) eq "Encryption checking OK");
 	my ($game_home, $mod, $pureOutput) = &decrypt_params(@_);
@@ -1480,7 +1480,7 @@ sub installed_steam_version
 
 sub automatic_steam_update
 {
-	logger 'STEAM CALLED automatic_steam_update';
+	logger "STEAM CALLED automatic_steam_update";
 	
 	return "Bad Encryption Key" unless(decrypt_param(pop(@_)) eq "Encryption checking OK");
 	my ($home_id, $game_home, $server_ip, $server_port, $exec_path, $exec_folder_path,
