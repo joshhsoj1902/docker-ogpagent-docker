@@ -1094,6 +1094,9 @@ sub readfile
 	chdir AGENT_RUN_DIR;
 	my $userfile = &decrypt_param(@_);
 
+	$userfile = map_filepath($userfile);
+  	parse_create_home_dir($userfile);
+
   return "1; ";
 
 }
