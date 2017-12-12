@@ -13,7 +13,6 @@ then
         echo $num;
         exit;
     done
-    # service_replicas=$(docker service inspect --format='{{.Spec.Mode.Replicated.Replicas}}' $service_name)
     echo $service_replicas
 else
     echo 0

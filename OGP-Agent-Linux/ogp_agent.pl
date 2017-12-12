@@ -585,64 +585,66 @@ sub decrypt_params
 
 sub check_steam_cmd_client
 {
-	if (STEAM_LICENSE ne STEAM_LICENSE_OK)
-	{
-		logger "Steam license not accepted, stopping Steam client check.";
-		return 0;
-	}
-	if (!-d STEAMCMD_CLIENT_DIR && !mkdir STEAMCMD_CLIENT_DIR)
-	{
-		logger "Could not create " . STEAMCMD_CLIENT_DIR . " directory $!.", 1;
-		exit -1;
-	}
-	if (!-w STEAMCMD_CLIENT_DIR)
-	{
-		logger "Steam client dir '"
-		  . STEAMCMD_CLIENT_DIR
-		  . "' not writable. Unable to get Steam client.";
-		return -1;
-	}
-	if (!-f STEAMCMD_CLIENT_BIN)
-	{
-		logger "The Steam client, steamcmd, does not exist yet, installing...";
-		my $steam_client_file = 'steamcmd_linux.tar.gz';
-		my $steam_client_path = Path::Class::File->new(STEAMCMD_CLIENT_DIR, $steam_client_file);
-		my $steam_client_url =
-		  "http://media.steampowered.com/client/" . $steam_client_file;
-		logger "Downloading the Steam client from $steam_client_url to '"
-		  . $steam_client_path . "'.";
-
-		my $ua = LWP::UserAgent->new;
-		$ua->agent('Mozilla/5.0');
-		my $response = $ua->get($steam_client_url, ':content_file' => "$steam_client_path");
-
-		unless ($response->is_success)
-		{
-			logger "Failed to download steam installer from "
-			  . $steam_client_url
-			  . ".", 1;
-			return -1;
-		}
-		if (-f $steam_client_path)
-		{
-			logger "Uncompressing $steam_client_path";
-			if ( uncompress_file_without_decrypt($steam_client_path, STEAMCMD_CLIENT_DIR) != 1 )
-			{
-				unlink($steam_client_path);
-				logger "Unable to uncompress $steam_client_path, the file has been removed.";
-				return -1;
-			}
-			unlink($steam_client_path);
-		}
-	}
-	if (!-x STEAMCMD_CLIENT_BIN)
-	{
-		if ( ! chmod 0755, STEAMCMD_CLIENT_BIN )
-		{
-			logger "Unable to apply execution permission to ".STEAMCMD_CLIENT_BIN.".";
-		}
-	}
 	return 1;
+
+	# if (STEAM_LICENSE ne STEAM_LICENSE_OK)
+	# {
+	# 	logger "Steam license not accepted, stopping Steam client check.";
+	# 	return 0;
+	# }
+	# if (!-d STEAMCMD_CLIENT_DIR && !mkdir STEAMCMD_CLIENT_DIR)
+	# {
+	# 	logger "Could not create " . STEAMCMD_CLIENT_DIR . " directory $!.", 1;
+	# 	exit -1;
+	# }
+	# if (!-w STEAMCMD_CLIENT_DIR)
+	# {
+	# 	logger "Steam client dir '"
+	# 	  . STEAMCMD_CLIENT_DIR
+	# 	  . "' not writable. Unable to get Steam client.";
+	# 	return -1;
+	# }
+	# if (!-f STEAMCMD_CLIENT_BIN)
+	# {
+	# 	logger "The Steam client, steamcmd, does not exist yet, installing...";
+	# 	my $steam_client_file = 'steamcmd_linux.tar.gz';
+	# 	my $steam_client_path = Path::Class::File->new(STEAMCMD_CLIENT_DIR, $steam_client_file);
+	# 	my $steam_client_url =
+	# 	  "http://media.steampowered.com/client/" . $steam_client_file;
+	# 	logger "Downloading the Steam client from $steam_client_url to '"
+	# 	  . $steam_client_path . "'.";
+
+	# 	my $ua = LWP::UserAgent->new;
+	# 	$ua->agent('Mozilla/5.0');
+	# 	my $response = $ua->get($steam_client_url, ':content_file' => "$steam_client_path");
+
+	# 	unless ($response->is_success)
+	# 	{
+	# 		logger "Failed to download steam installer from "
+	# 		  . $steam_client_url
+	# 		  . ".", 1;
+	# 		return -1;
+	# 	}
+	# 	if (-f $steam_client_path)
+	# 	{
+	# 		logger "Uncompressing $steam_client_path";
+	# 		if ( uncompress_file_without_decrypt($steam_client_path, STEAMCMD_CLIENT_DIR) != 1 )
+	# 		{
+	# 			unlink($steam_client_path);
+	# 			logger "Unable to uncompress $steam_client_path, the file has been removed.";
+	# 			return -1;
+	# 		}
+	# 		unlink($steam_client_path);
+	# 	}
+	# }
+	# if (!-x STEAMCMD_CLIENT_BIN)
+	# {
+	# 	if ( ! chmod 0755, STEAMCMD_CLIENT_BIN )
+	# 	{
+	# 		logger "Unable to apply execution permission to ".STEAMCMD_CLIENT_BIN.".";
+	# 	}
+	# }
+	# return 1;
 }
 
 sub is_screen_running
@@ -778,29 +780,7 @@ sub renice_process
 
 sub renice_process_without_decrypt
 {
-  logger "renice_process_without_decrypt";
-	my ($home_id, $nice) = @_;
-	if ($nice != 0)
-	{
-		my @pids = get_home_pids($home_id);
-		logger
-		  "Renicing pids [ @pids ] from home_id $home_id with nice value $nice.";
-		foreach my $pid (@pids)
-		{
-			my $rpid = kill 0, $pid;
-			if ($rpid == 1)
-			{
-				my $ret = sudo_exec_without_decrypt('/usr/bin/renice '.$nice.' '.$pid);
-				($ret) = split(/;/, $ret, 2);
-				if($ret != 1)
-				{
-					logger "Unable to renice process, probably bad sudo password or not in sudoers list.";
-					return -1
-				}
-			}
-		}
-	}
-	return 1;
+  return 1;
 }
 
 # This is used to force a process to run on a particular CPU
@@ -812,54 +792,13 @@ sub force_cpu
 
 sub force_cpu_without_decrypt
 {
-  logger "force_cpu_without_decrypt";
-	my ($home_id, $cpu) = @_;
-	if ($cpu ne 'NA')
-	{
-		my @pids = get_home_pids($home_id);
-		logger
-		  "Setting server from home_id $home_id with pids @pids to run on CPU $cpu.";
-		foreach my $pid (@pids)
-		{
-			my $rpid = kill 0, $pid;
-			if ($rpid == 1)
-			{
-				my $ret = sudo_exec_without_decrypt('/usr/bin/taskset -pc '.$cpu.' '.$pid);
-				($ret) = split(/;/, $ret, 2);
-				if($ret != 1)
-				{
-					logger "Unable to set cpu, probably a bad sudo password or not in sudoers list.";
-					return -1
-				}
-			}
-		}
-	}
-	return 1;
+  return 1;
 }
 
 # Returns the number of CPUs available.
 sub cpu_count
 {
-  logger "cpu_count";
-	return "Bad Encryption Key" unless(decrypt_param(pop(@_)) eq "Encryption checking OK");
-	if (!-e "/proc/cpuinfo")
-	{
-		return "ERROR - Missing /proc/cpuinfo";
-	}
-
-	open(CPUINFO, '<', "/proc/cpuinfo")
-	  or return "ERROR - Cannot open /proc/cpuinfo";
-
-	my $cpu_count = 0;
-
-	while (<CPUINFO>)
-	{
-		chomp;
-		next if $_ !~ /^processor/;
-		$cpu_count++;
-	}
-	close(CPUINFO);
-	return "$cpu_count";
+  return "0";
 }
 
 ### File exists check ####
