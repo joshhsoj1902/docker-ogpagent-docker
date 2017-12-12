@@ -1573,7 +1573,7 @@ sub master_server_update
 	return "Bad Encryption Key" unless(decrypt_param(pop(@_)) eq "Encryption checking OK");
 	my ($home_id,$home_path,$ms_home_id,$ms_home_path,$exec_folder_path,$exec_path,$precmd,$postcmd) = decrypt_params(@_);
 
-	start_docker_install($home_id)
+	start_docker_install($home_id);
 
 	return 1;
 }
@@ -1592,7 +1592,7 @@ sub steam_cmd_without_decrypt
 {
 	my ($home_id, $home_path, $mod, $modname, $betaname, $betapwd, $user, $pass, $guard, $exec_folder_path, $exec_path, $precmd, $postcmd, $cfg_os, $filesToLockUnlock) = @_;
 
-	start_docker_install($home_id)
+	start_docker_install($home_id);
 
 	return 1;
 }
@@ -1602,12 +1602,12 @@ sub fetch_steam_version
 	return "Bad Encryption Key" unless(decrypt_param(pop(@_)) eq "Encryption checking OK");
 	my ($appId, $pureOutput) = &decrypt_params(@_);
 
-	# my $steam_binary = Path::Class::File->new(STEAMCMD_CLIENT_DIR, "steamcmd.sh");
-	# my $steam_options = "+login anonymous +app_info_update 1 +app_info_print \"$appId\" +quit";
-	# my $grep = $pureOutput != "0" ? "" : '| grep -EA 1000 "^\s+\"branches\"$" | grep -EA 5 "^\s+\"public\"$" | grep -m 1 -EB 10 "^\s+}$" | grep -E "^\s+\"buildid\"\s+" | tr \'[:blank:]"\' \' \' | tr -s \' \' | cut -d\' \' -f3';
+	my $steam_binary = Path::Class::File->new(STEAMCMD_CLIENT_DIR, "steamcmd.sh");
+	my $steam_options = "+login anonymous +app_info_update 1 +app_info_print \"$appId\" +quit";
+	my $grep = $pureOutput != "0" ? "" : '| grep -EA 1000 "^\s+\"branches\"$" | grep -EA 5 "^\s+\"public\"$" | grep -m 1 -EB 10 "^\s+}$" | grep -E "^\s+\"buildid\"\s+" | tr \'[:blank:]"\' \' \' | tr -s \' \' | cut -d\' \' -f3';
 
-	# logger "Getting latest version info for AppId $appId";
-	# my $response = `$steam_binary $steam_options $grep`;
+	logger "Getting latest version info for AppId $appId";
+	my $response = `$steam_binary $steam_options $grep`;
 
 	return $response;
 }
