@@ -585,66 +585,9 @@ sub decrypt_params
 
 sub check_steam_cmd_client
 {
+	logger 'STEAM CALLED check_steam_cmd_client';
+
 	return 1;
-
-	# if (STEAM_LICENSE ne STEAM_LICENSE_OK)
-	# {
-	# 	logger "Steam license not accepted, stopping Steam client check.";
-	# 	return 0;
-	# }
-	# if (!-d STEAMCMD_CLIENT_DIR && !mkdir STEAMCMD_CLIENT_DIR)
-	# {
-	# 	logger "Could not create " . STEAMCMD_CLIENT_DIR . " directory $!.", 1;
-	# 	exit -1;
-	# }
-	# if (!-w STEAMCMD_CLIENT_DIR)
-	# {
-	# 	logger "Steam client dir '"
-	# 	  . STEAMCMD_CLIENT_DIR
-	# 	  . "' not writable. Unable to get Steam client.";
-	# 	return -1;
-	# }
-	# if (!-f STEAMCMD_CLIENT_BIN)
-	# {
-	# 	logger "The Steam client, steamcmd, does not exist yet, installing...";
-	# 	my $steam_client_file = 'steamcmd_linux.tar.gz';
-	# 	my $steam_client_path = Path::Class::File->new(STEAMCMD_CLIENT_DIR, $steam_client_file);
-	# 	my $steam_client_url =
-	# 	  "http://media.steampowered.com/client/" . $steam_client_file;
-	# 	logger "Downloading the Steam client from $steam_client_url to '"
-	# 	  . $steam_client_path . "'.";
-
-	# 	my $ua = LWP::UserAgent->new;
-	# 	$ua->agent('Mozilla/5.0');
-	# 	my $response = $ua->get($steam_client_url, ':content_file' => "$steam_client_path");
-
-	# 	unless ($response->is_success)
-	# 	{
-	# 		logger "Failed to download steam installer from "
-	# 		  . $steam_client_url
-	# 		  . ".", 1;
-	# 		return -1;
-	# 	}
-	# 	if (-f $steam_client_path)
-	# 	{
-	# 		logger "Uncompressing $steam_client_path";
-	# 		if ( uncompress_file_without_decrypt($steam_client_path, STEAMCMD_CLIENT_DIR) != 1 )
-	# 		{
-	# 			unlink($steam_client_path);
-	# 			logger "Unable to uncompress $steam_client_path, the file has been removed.";
-	# 			return -1;
-	# 		}
-	# 		unlink($steam_client_path);
-	# 	}
-	# }
-	# if (!-x STEAMCMD_CLIENT_BIN)
-	# {
-	# 	if ( ! chmod 0755, STEAMCMD_CLIENT_BIN )
-	# 	{
-	# 		logger "Unable to apply execution permission to ".STEAMCMD_CLIENT_BIN.".";
-	# 	}
-	# }
-	# return 1;
 }
 
 sub is_screen_running
@@ -742,23 +685,13 @@ sub universal_start_without_decrypt
   my $game_instance_dir = GAME_DIR . '/' . $home_id;
   logger "game_instance_dir   $game_instance_dir";
 
-	if (is_screen_running_without_decrypt(SCREEN_TYPE_HOME, $home_id) == 1)
-	{
-		logger "This server is already running (ID: $home_id).";
-		return -14;
-	}
-
-  #The game isn't installed yet on first launch meaning the config file isn't set up
-  if (not -d $game_instance_dir) {
-    start_docker_install($home_id);
-    return 0;
+  if (is_screen_running_without_decrypt(SCREEN_TYPE_HOME, $home_id) == 1)
+    {
+    logger "This server is already running (ID: $home_id).";
+    return -14;
   }
 
-  gomplate_compose($home_id);
-
-  my $installImageCmd = 'sudo ./helpers/doLocalInstall.sh ' . GAME_DIR . ' ' . $home_id;
-  logger 'start command: ' . $installImageCmd;
-  sudo_exec_without_decrypt($installImageCmd);
+  start_docker_install($home_id);
 
   my $cmd = 'sudo ./helpers/startService.sh ' . GAME_DIR . ' ' . $home_id;
   logger 'start command: ' . $cmd;
@@ -774,25 +707,14 @@ sub universal_start_without_decrypt
 sub renice_process
 {
   logger "renice_process";
-	return "Bad Encryption Key" unless(decrypt_param(pop(@_)) eq "Encryption checking OK");
-	return renice_process_without_decrypt(decrypt_params(@_));
-}
-
-sub renice_process_without_decrypt
-{
-  return 1;
+	return 1;
 }
 
 # This is used to force a process to run on a particular CPU
 sub force_cpu
 {
   logger "force_cpu";
-	return force_cpu_without_decrypt(decrypt_params(@_));
-}
-
-sub force_cpu_without_decrypt
-{
-  return 1;
+	return 1;
 }
 
 # Returns the number of CPUs available.
@@ -922,7 +844,6 @@ sub get_log
 # stop server function
 sub stop_server
 {
-  logger "stop_server";
 	chomp(@_);
 	return "Bad Encryption Key" unless(decrypt_param(pop(@_)) eq "Encryption checking OK");
 	return stop_server_without_decrypt(decrypt_params(@_));
@@ -938,7 +859,6 @@ sub stop_server_without_decrypt
 		$control_password, $control_type, $home_path) = @_;
 
   	my $service_name = $home_id . '_game';
-  	logger '$service_name ' .  $service_name;
 
   	my $docker_run_command = `sudo ./helpers/scaleService.sh '$service_name' 0`;
 	logger 'docker command: ' . $docker_run_command;
@@ -1030,27 +950,10 @@ sub send_rcon_command
 sub dirlist
 {
   logger "dirlist";
-	return "Bad Encryption Key" unless(decrypt_param(pop(@_)) eq "Encryption checking OK");
-	my ($datadir) = &decrypt_param(@_);
-	logger "Asked for dirlist of $datadir directory.";
+  return "Bad Encryption Key" unless(decrypt_param(pop(@_)) eq "Encryption checking OK");
+  my ($datadir) = &decrypt_param(@_);
+  logger "Asked for dirlist of $datadir directory.";
   return "foo;bar";
-
-
-
-
-	if (!-d $datadir)
-	{
-		logger "ERROR - Directory [ $datadir ] not found!";
-		return -1;
-	}
-	if (!opendir(DIR, $datadir))
-	{
-		logger "ERROR - Can't open $datadir: $!";
-		return -2;
-	}
-	my @dirlist = readdir(DIR);
-	closedir(DIR);
-	return join(";", @dirlist);
 }
 
 ##### Returns a directory listing with extra info the filemanager
@@ -1061,11 +964,10 @@ sub dirlist
 sub dirlistfm
 {
   logger "send_rcon_command";
-	return "Bad Encryption Key" unless(decrypt_param(pop(@_)) eq "Encryption checking OK");
-	my $datadir = &decrypt_param(@_);
+  return "Bad Encryption Key" unless(decrypt_param(pop(@_)) eq "Encryption checking OK");
+  my $datadir = &decrypt_param(@_);
 
-	logger "Asked for dirlist of $datadir directory.";
-
+  logger "Asked for dirlist of $datadir directory.";
   return 1;
 }
 
@@ -1086,11 +988,30 @@ sub map_filepath
 sub readfile
 {
   logger "readfile";
-	return "Bad Encryption Key" unless(decrypt_param(pop(@_)) eq "Encryption checking OK");
-	chdir AGENT_RUN_DIR;
-	my $userfile = &decrypt_param(@_);
+  return "Bad Encryption Key" unless(decrypt_param(pop(@_)) eq "Encryption checking OK");
+#   chdir AGENT_RUN_DIR;
+  my $userfile = &decrypt_param(@_);
+
+  $userfile = map_filepath($userfile);
+  parse_create_home_dir($userfile);
 
   return "1; ";
+
+}
+
+sub parse_create_home_dir
+{
+	my ( $path ) = @_;
+
+	my $game_dir = GAME_DIR;
+
+	my $home_id = `sudo ./helpers/getHomeId.sh '$game_dir' '$path'`;
+  	logger 'home_id' . $home_id;
+	  if ( ($home_id ne "0") && ($home_id > 0))
+  	  { 
+			logger 'home_id IS VALID';
+			create_home_dir($home_id);
+  	  }
 
 }
 
@@ -1104,7 +1025,12 @@ sub writefile
 	chdir AGENT_RUN_DIR;
 	# $writefile = file we're editing, $filedata = the contents were writing to it
 	my ($writefile, $filedata) = &decrypt_params(@_);
+
+
+
   $writefile = map_filepath($writefile);
+  parse_create_home_dir($writefile);
+  
 
   my 	$filedata2 = decode_base64($filedata);
   $filedata2 =~ s/\r//g;
@@ -1387,46 +1313,6 @@ sub create_secure_script
 	return 0;
 }
 
-sub check_b4_chdir
-{
-  logger "check_b4_chdir";
-	my ( $path ) = @_;
-
-	my $uid = `id -u`;
-	chomp $uid;
-	my $gid = `id -g`;
-	chomp $gid;
-
-	if (!-e $path)
-	{
-		logger "$path does not exist yet. Trying to create it...";
-
-		if (!mkpath($path))
-		{
-			logger "Error creating $path . Errno: $!";
-			return -1;
-		}
-
-		# Set perms on it as well
-		sudo_exec_without_decrypt('chown -Rf '.$uid.':'.$gid.' \''.$path.'\'');
-
-	}
-	else
-	{
-		# File or directory already exists
-		# Make sure it's owned by the agent
-		secure_path_without_decrypt('chattr-i', $path);
-	}
-
-	if (!chdir $path)
-	{
-		logger "Unable to change dir to '$path'.";
-		return -1;
-	}
-
-	return 0;
-}
-
 sub create_bash_scripts
 {
 	my ( $home_path, $bash_scripts_path, $precmd, $postcmd, @installcmds ) = @_;
@@ -1489,12 +1375,6 @@ sub start_rsync_install
 	return "Bad Encryption Key" unless(decrypt_param(pop(@_)) eq "Encryption checking OK");
 	my ($home_id, $home_path, $url, $exec_folder_path, $exec_path, $precmd, $postcmd, $filesToLockUnlock) = decrypt_params(@_);
 
-	if ( check_b4_chdir($home_path) != 0)
-	{
-		return 0;
-	}
-
-
   logger "=================================";
   logger "HOME_id $home_id";
   logger "home_path $home_path";
@@ -1502,55 +1382,8 @@ sub start_rsync_install
 
   start_docker_install($home_id);
 
-
   return 1;
 
-
-
-
-	secure_path_without_decrypt('chattr-i', $home_path);
-
-	create_secure_script($home_path, $exec_folder_path, $exec_path);
-
-	my $bash_scripts_path = MANUAL_TMP_DIR . "/home_id_" . $home_id;
-
-	if ( check_b4_chdir($bash_scripts_path) != 0)
-	{
-		return 0;
-	}
-
-	# Rsync install require the rsync binary to exist in the system
-	# to enable this functionality.
-	my $rsync_binary = Path::Class::File->new("/usr/bin", "rsync");
-
-	if (!-f $rsync_binary)
-	{
-		logger "Failed to start rsync update from "
-		  . $url
-		  . " to $home_path. Error: Rsync client not installed.";
-		return 0;
-	}
-
-	my $screen_id = create_screen_id(SCREEN_TYPE_UPDATE, $home_id);
-
-	my $log_file = Path::Class::File->new(SCREEN_LOGS_DIR, "screenlog.$screen_id");
-
-	# if(defined $filesToLockUnlock && $filesToLockUnlock ne ""){
-	# 	$postcmd .= "\n" . lock_additional_files_logic($home_path, $filesToLockUnlock, "lock", "str");
-	# }
-
-	backup_home_log( $home_id, $log_file );
-	my $path	= $home_path;
-	$path		=~ s/('+)/'\"$1\"'/g;
-	my @installcmds = ("/usr/bin/rsync --archive --compress --copy-links --update --verbose rsync://$url '$path'");
-	my $installfile = create_bash_scripts( $home_path, $bash_scripts_path, $precmd, $postcmd, @installcmds );
-
-	my $screen_cmd = create_screen_cmd($screen_id, "./$installfile");
-	logger "Running rsync update: /usr/bin/rsync --archive --compress --copy-links --update --verbose rsync://$url '$home_path'";
-	system($screen_cmd);
-
-	chdir AGENT_RUN_DIR;
-	return 1;
 }
 
 
@@ -1561,13 +1394,26 @@ sub start_rsync_install
 
 sub start_docker_install
 {
-    #TODO: This function should create the directory and copy the base docker-compose file into Place
+	my ($home_id) = @_;
+
+	create_home_dir($home_id);
+
+	gomplate_compose($home_id);
+
+	my $installImageCmd = 'sudo ./helpers/doLocalInstall.sh ' . GAME_DIR . ' ' . $home_id;
+	logger 'start command: ' . $installImageCmd;
+	sudo_exec_without_decrypt($installImageCmd);	
+
+    return 1;
+}
+
+sub create_home_dir
+{
 	my ($home_id) = @_;
 
 	my $cmd = 'sudo ./helpers/setupHome.sh ' . GAME_DIR . ' ' . $home_id;
 	logger 'docker command: ' . $cmd;
 	sudo_exec_without_decrypt($cmd);
-    return 1;
 }
 
 
@@ -1585,67 +1431,16 @@ sub master_server_update
 	return "Bad Encryption Key" unless(decrypt_param(pop(@_)) eq "Encryption checking OK");
 	my ($home_id,$home_path,$ms_home_id,$ms_home_path,$exec_folder_path,$exec_path,$precmd,$postcmd) = decrypt_params(@_);
 
-	if ( check_b4_chdir($home_path) != 0)
-	{
-		return 0;
-	}
+	start_docker_install($home_id);
 
-	secure_path_without_decrypt('chattr-i', $home_path);
-
-	create_secure_script($home_path, $exec_folder_path, $exec_path);
-
-	my $bash_scripts_path = MANUAL_TMP_DIR . "/home_id_" . $home_id;
-
-	if ( check_b4_chdir($bash_scripts_path) != 0)
-	{
-		return 0;
-	}
-
-	my $screen_id = create_screen_id(SCREEN_TYPE_UPDATE, $home_id);
-
-	my $log_file = Path::Class::File->new(SCREEN_LOGS_DIR, "screenlog.$screen_id");
-
-	backup_home_log( $home_id, $log_file );
-
-	my $my_home_path = $home_path;
-	$my_home_path =~ s/('+)/'\"$1\"'/g;
-	$exec_path =~ s/\Q$home_path\E//g;
-	$exec_path =~ s/^\///g;
-	$exec_path =~ s/('+)/'\"$1\"'/g;
-	$ms_home_path =~ s/('+)/'\"$1\"'/g;
-
-	my @installcmds = ("cd '$ms_home_path'");
-
-	## Copy files that match the extensions listed at extPatterns.txt
-	open(EXT_PATTERNS, '<', Path::Class::File->new(AGENT_RUN_DIR, "extPatterns.txt"))
-		  || logger "Error reading patterns file $!";
-	my @ext_paterns = <EXT_PATTERNS>;
-	foreach my $patern (@ext_paterns)
-	{
-		chop $patern;
-		push (@installcmds, "find  -iname \\\*.$patern -exec cp -Rfp --parents {} '$my_home_path'/ \\\;");
-	}
-	close EXT_PATTERNS;
-
-	## Copy the server executable so it can be secured with chattr +i
-	push (@installcmds, "cp -vf --parents '$exec_path' '$my_home_path'");
-
-	## Do symlinks for each of the other files
-	push (@installcmds, "cp -vuRfs  '$ms_home_path'/* '$my_home_path'");
-
-	my $installfile = create_bash_scripts( $home_path, $bash_scripts_path, $precmd, $postcmd, @installcmds );
-
-	my $screen_cmd = create_screen_cmd($screen_id, "./$installfile");
-	logger "Running master server update from home ID $home_id to home ID $ms_home_id";
-	system($screen_cmd);
-
-	chdir AGENT_RUN_DIR;
 	return 1;
 }
 
 sub steam_cmd
 {
 	chomp(@_);
+	logger 'STEAM CALLED steam_cmd';
+	
 	return "Bad Encryption Key" unless(decrypt_param(pop(@_)) eq "Encryption checking OK");
 	return steam_cmd_without_decrypt(decrypt_params(@_));
 }
@@ -1656,96 +1451,17 @@ sub steam_cmd
 sub steam_cmd_without_decrypt
 {
 	my ($home_id, $home_path, $mod, $modname, $betaname, $betapwd, $user, $pass, $guard, $exec_folder_path, $exec_path, $precmd, $postcmd, $cfg_os, $filesToLockUnlock) = @_;
+	logger 'STEAM CALLED steam_cmd_without_decrypt';
 
-	if ( check_b4_chdir($home_path) != 0)
-	{
-		return 0;
-	}
-
-	secure_path_without_decrypt('chattr-i', $home_path);
-
-	create_secure_script($home_path, $exec_folder_path, $exec_path);
-
-	my $bash_scripts_path = MANUAL_TMP_DIR . "/home_id_" . $home_id;
-
-	if ( check_b4_chdir($bash_scripts_path) != 0)
-	{
-		return 0;
-	}
-
-	my $screen_id = create_screen_id(SCREEN_TYPE_UPDATE, $home_id);
-	my $screen_id_for_txt_update = substr ($screen_id, rindex($screen_id, '_') + 1);
-	my $steam_binary = Path::Class::File->new(STEAMCMD_CLIENT_DIR, "steamcmd.sh");
-	my $installSteamFile =  $screen_id_for_txt_update . "_install.txt";
-
-	my $installtxt = Path::Class::File->new(STEAMCMD_CLIENT_DIR, $installSteamFile);
-	open  FILE, '>', $installtxt;
-	print FILE "\@ShutdownOnFailedCommand 1\n";
-	print FILE "\@NoPromptForPassword 1\n";
-	if($cfg_os eq 'windows')
-	{
-		print FILE "\@sSteamCmdForcePlatformType windows\n";
-	}
-	if($guard ne '')
-	{
-		print FILE "set_steam_guard_code $guard\n";
-	}
-	if($user ne '' && $user ne 'anonymous')
-	{
-		print FILE "login $user $pass\n";
-	}
-	else
-	{
-		print FILE "login anonymous\n";
-	}
-
-	print FILE "force_install_dir \"$home_path\"\n";
-
-	if($modname ne "")
-	{
-		print FILE "app_set_config $mod mod $modname\n";
-		print FILE "app_update $mod mod $modname validate\n";
-	}
-
-	if($betaname ne "" && $betapwd ne "")
-	{
-		print FILE "app_update $mod -beta $betaname -betapassword $betapwd\n";
-	}
-	elsif($betaname ne "" && $betapwd eq "")
-	{
-		print FILE "app_update $mod -beta $betaname\n";
-	}
-	else
-	{
-		print FILE "app_update $mod\n";
-	}
-
-	print FILE "exit\n";
-	close FILE;
-
-	my $log_file = Path::Class::File->new(SCREEN_LOGS_DIR, "screenlog.$screen_id");
-	backup_home_log( $home_id, $log_file );
-
-	my $postcmd_mod = $postcmd;
-
-	# if(defined $filesToLockUnlock && $filesToLockUnlock ne ""){
-	# 	$postcmd_mod .= "\n" . lock_additional_files_logic($home_path, $filesToLockUnlock, "lock", "str");
-	# }
-
-	my @installcmds = ("$steam_binary +runscript $installtxt +exit");
-
-	my $installfile = create_bash_scripts( $home_path, $bash_scripts_path, $precmd, $postcmd_mod, @installcmds );
-
-	my $screen_cmd = create_screen_cmd($screen_id, "./$installfile");
-
-	logger "Running steam update: $steam_binary +runscript $installtxt +exit";
-	system($screen_cmd);
+	start_docker_install($home_id);
 
 	return 1;
 }
 
 sub fetch_steam_version
 {
+	logger 'STEAM CALLED fetch_steam_version';
+	
 	return "Bad Encryption Key" unless(decrypt_param(pop(@_)) eq "Encryption checking OK");
 	my ($appId, $pureOutput) = &decrypt_params(@_);
 
@@ -1761,6 +1477,8 @@ sub fetch_steam_version
 
 sub installed_steam_version
 {
+	logger 'STEAM CALLED installed_steam_version';
+	
 	return "Bad Encryption Key" unless(decrypt_param(pop(@_)) eq "Encryption checking OK");
 	my ($game_home, $mod, $pureOutput) = &decrypt_params(@_);
 	my $appFile = $game_home."/steamapps/appmanifest_$mod.acf";
@@ -1776,6 +1494,8 @@ sub installed_steam_version
 
 sub automatic_steam_update
 {
+	logger 'STEAM CALLED automatic_steam_update';
+	
 	return "Bad Encryption Key" unless(decrypt_param(pop(@_)) eq "Encryption checking OK");
 	my ($home_id, $game_home, $server_ip, $server_port, $exec_path, $exec_folder_path,
 		$control_protocol, $control_password, $control_type,
