@@ -1098,6 +1098,22 @@ sub readfile
 
 }
 
+sub parse_create_home_dir
+{
+	my ( $path ) = @_;
+
+	my $game_dir = GAME_DIR
+
+	my $home_id = `sudo ./helpers/getHomeId.sh '$game_dir' '$path'`;
+  	logger 'home_id' . $home_id;
+	  if ( ($home_id ne "0") && ($home_id > 0))
+  	  { 
+			logger 'home_id IS VALID'
+			create_home_dir($home_id);
+  	  }
+
+}
+
 ###### Backs up file, then writes data to new file
 ### @return 1 On success
 ### @return 0 In case of a failure
@@ -1108,7 +1124,12 @@ sub writefile
 	chdir AGENT_RUN_DIR;
 	# $writefile = file we're editing, $filedata = the contents were writing to it
 	my ($writefile, $filedata) = &decrypt_params(@_);
+
+
+
   $writefile = map_filepath($writefile);
+  parse_create_home_dir($writefile)
+  
 
   my 	$filedata2 = decode_base64($filedata);
   $filedata2 =~ s/\r//g;
@@ -1396,6 +1417,8 @@ sub check_b4_chdir
   logger "check_b4_chdir";
 	my ( $path ) = @_;
 
+	# create_home_dir($home_id);
+
 	my $uid = `id -u`;
 	chomp $uid;
 	my $gid = `id -g`;
@@ -1493,12 +1516,6 @@ sub start_rsync_install
 	return "Bad Encryption Key" unless(decrypt_param(pop(@_)) eq "Encryption checking OK");
 	my ($home_id, $home_path, $url, $exec_folder_path, $exec_path, $precmd, $postcmd, $filesToLockUnlock) = decrypt_params(@_);
 
-	if ( check_b4_chdir($home_path) != 0)
-	{
-		return 0;
-	}
-
-
   logger "=================================";
   logger "HOME_id $home_id";
   logger "home_path $home_path";
@@ -1519,12 +1536,9 @@ sub start_rsync_install
 
 sub start_docker_install
 {
-    #TODO: This function should create the directory and copy the base docker-compose file into Place
 	my ($home_id) = @_;
 
-	my $cmd = 'sudo ./helpers/setupHome.sh ' . GAME_DIR . ' ' . $home_id;
-	logger 'docker command: ' . $cmd;
-	sudo_exec_without_decrypt($cmd);
+	create_home_dir($home_id);
 
 	gomplate_compose($home_id);
 
@@ -1533,6 +1547,15 @@ sub start_docker_install
 	sudo_exec_without_decrypt($installImageCmd);	
 
     return 1;
+}
+
+sub create_home_dir
+{
+	my ($home_id) = @_;
+
+	my $cmd = 'sudo ./helpers/setupHome.sh ' . GAME_DIR . ' ' . $home_id;
+	logger 'docker command: ' . $cmd;
+	sudo_exec_without_decrypt($cmd);
 }
 
 
@@ -1550,61 +1573,8 @@ sub master_server_update
 	return "Bad Encryption Key" unless(decrypt_param(pop(@_)) eq "Encryption checking OK");
 	my ($home_id,$home_path,$ms_home_id,$ms_home_path,$exec_folder_path,$exec_path,$precmd,$postcmd) = decrypt_params(@_);
 
-	if ( check_b4_chdir($home_path) != 0)
-	{
-		return 0;
-	}
+	start_docker_install($home_id)
 
-	secure_path_without_decrypt('chattr-i', $home_path);
-
-	create_secure_script($home_path, $exec_folder_path, $exec_path);
-
-	my $bash_scripts_path = MANUAL_TMP_DIR . "/home_id_" . $home_id;
-
-	if ( check_b4_chdir($bash_scripts_path) != 0)
-	{
-		return 0;
-	}
-
-	my $screen_id = create_screen_id(SCREEN_TYPE_UPDATE, $home_id);
-
-	my $log_file = Path::Class::File->new(SCREEN_LOGS_DIR, "screenlog.$screen_id");
-
-	backup_home_log( $home_id, $log_file );
-
-	my $my_home_path = $home_path;
-	$my_home_path =~ s/('+)/'\"$1\"'/g;
-	$exec_path =~ s/\Q$home_path\E//g;
-	$exec_path =~ s/^\///g;
-	$exec_path =~ s/('+)/'\"$1\"'/g;
-	$ms_home_path =~ s/('+)/'\"$1\"'/g;
-
-	my @installcmds = ("cd '$ms_home_path'");
-
-	## Copy files that match the extensions listed at extPatterns.txt
-	open(EXT_PATTERNS, '<', Path::Class::File->new(AGENT_RUN_DIR, "extPatterns.txt"))
-		  || logger "Error reading patterns file $!";
-	my @ext_paterns = <EXT_PATTERNS>;
-	foreach my $patern (@ext_paterns)
-	{
-		chop $patern;
-		push (@installcmds, "find  -iname \\\*.$patern -exec cp -Rfp --parents {} '$my_home_path'/ \\\;");
-	}
-	close EXT_PATTERNS;
-
-	## Copy the server executable so it can be secured with chattr +i
-	push (@installcmds, "cp -vf --parents '$exec_path' '$my_home_path'");
-
-	## Do symlinks for each of the other files
-	push (@installcmds, "cp -vuRfs  '$ms_home_path'/* '$my_home_path'");
-
-	my $installfile = create_bash_scripts( $home_path, $bash_scripts_path, $precmd, $postcmd, @installcmds );
-
-	my $screen_cmd = create_screen_cmd($screen_id, "./$installfile");
-	logger "Running master server update from home ID $home_id to home ID $ms_home_id";
-	system($screen_cmd);
-
-	chdir AGENT_RUN_DIR;
 	return 1;
 }
 
@@ -1622,93 +1592,9 @@ sub steam_cmd_without_decrypt
 {
 	my ($home_id, $home_path, $mod, $modname, $betaname, $betapwd, $user, $pass, $guard, $exec_folder_path, $exec_path, $precmd, $postcmd, $cfg_os, $filesToLockUnlock) = @_;
 
+	start_docker_install($home_id)
+
 	return 1;
-
-	# if ( check_b4_chdir($home_path) != 0)
-	# {
-	# 	return 0;
-	# }
-
-	# secure_path_without_decrypt('chattr-i', $home_path);
-
-	# create_secure_script($home_path, $exec_folder_path, $exec_path);
-
-	# my $bash_scripts_path = MANUAL_TMP_DIR . "/home_id_" . $home_id;
-
-	# if ( check_b4_chdir($bash_scripts_path) != 0)
-	# {
-	# 	return 0;
-	# }
-
-	# my $screen_id = create_screen_id(SCREEN_TYPE_UPDATE, $home_id);
-	# my $screen_id_for_txt_update = substr ($screen_id, rindex($screen_id, '_') + 1);
-	# my $steam_binary = Path::Class::File->new(STEAMCMD_CLIENT_DIR, "steamcmd.sh");
-	# my $installSteamFile =  $screen_id_for_txt_update . "_install.txt";
-
-	# my $installtxt = Path::Class::File->new(STEAMCMD_CLIENT_DIR, $installSteamFile);
-	# open  FILE, '>', $installtxt;
-	# print FILE "\@ShutdownOnFailedCommand 1\n";
-	# print FILE "\@NoPromptForPassword 1\n";
-	# if($cfg_os eq 'windows')
-	# {
-	# 	print FILE "\@sSteamCmdForcePlatformType windows\n";
-	# }
-	# if($guard ne '')
-	# {
-	# 	print FILE "set_steam_guard_code $guard\n";
-	# }
-	# if($user ne '' && $user ne 'anonymous')
-	# {
-	# 	print FILE "login $user $pass\n";
-	# }
-	# else
-	# {
-	# 	print FILE "login anonymous\n";
-	# }
-
-	# print FILE "force_install_dir \"$home_path\"\n";
-
-	# if($modname ne "")
-	# {
-	# 	print FILE "app_set_config $mod mod $modname\n";
-	# 	print FILE "app_update $mod mod $modname validate\n";
-	# }
-
-	# if($betaname ne "" && $betapwd ne "")
-	# {
-	# 	print FILE "app_update $mod -beta $betaname -betapassword $betapwd\n";
-	# }
-	# elsif($betaname ne "" && $betapwd eq "")
-	# {
-	# 	print FILE "app_update $mod -beta $betaname\n";
-	# }
-	# else
-	# {
-	# 	print FILE "app_update $mod\n";
-	# }
-
-	# print FILE "exit\n";
-	# close FILE;
-
-	# my $log_file = Path::Class::File->new(SCREEN_LOGS_DIR, "screenlog.$screen_id");
-	# backup_home_log( $home_id, $log_file );
-
-	# my $postcmd_mod = $postcmd;
-
-	# # if(defined $filesToLockUnlock && $filesToLockUnlock ne ""){
-	# # 	$postcmd_mod .= "\n" . lock_additional_files_logic($home_path, $filesToLockUnlock, "lock", "str");
-	# # }
-
-	# my @installcmds = ("$steam_binary +runscript $installtxt +exit");
-
-	# my $installfile = create_bash_scripts( $home_path, $bash_scripts_path, $precmd, $postcmd_mod, @installcmds );
-
-	# my $screen_cmd = create_screen_cmd($screen_id, "./$installfile");
-
-	# logger "Running steam update: $steam_binary +runscript $installtxt +exit";
-	# system($screen_cmd);
-
-	# return 1;
 }
 
 sub fetch_steam_version
@@ -1716,12 +1602,12 @@ sub fetch_steam_version
 	return "Bad Encryption Key" unless(decrypt_param(pop(@_)) eq "Encryption checking OK");
 	my ($appId, $pureOutput) = &decrypt_params(@_);
 
-	my $steam_binary = Path::Class::File->new(STEAMCMD_CLIENT_DIR, "steamcmd.sh");
-	my $steam_options = "+login anonymous +app_info_update 1 +app_info_print \"$appId\" +quit";
-	my $grep = $pureOutput != "0" ? "" : '| grep -EA 1000 "^\s+\"branches\"$" | grep -EA 5 "^\s+\"public\"$" | grep -m 1 -EB 10 "^\s+}$" | grep -E "^\s+\"buildid\"\s+" | tr \'[:blank:]"\' \' \' | tr -s \' \' | cut -d\' \' -f3';
+	# my $steam_binary = Path::Class::File->new(STEAMCMD_CLIENT_DIR, "steamcmd.sh");
+	# my $steam_options = "+login anonymous +app_info_update 1 +app_info_print \"$appId\" +quit";
+	# my $grep = $pureOutput != "0" ? "" : '| grep -EA 1000 "^\s+\"branches\"$" | grep -EA 5 "^\s+\"public\"$" | grep -m 1 -EB 10 "^\s+}$" | grep -E "^\s+\"buildid\"\s+" | tr \'[:blank:]"\' \' \' | tr -s \' \' | cut -d\' \' -f3';
 
-	logger "Getting latest version info for AppId $appId";
-	my $response = `$steam_binary $steam_options $grep`;
+	# logger "Getting latest version info for AppId $appId";
+	# my $response = `$steam_binary $steam_options $grep`;
 
 	return $response;
 }
