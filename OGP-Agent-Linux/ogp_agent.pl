@@ -1370,48 +1370,6 @@ sub create_secure_script
 	return 0;
 }
 
-sub check_b4_chdir
-{
-  logger "check_b4_chdir";
-	my ( $path ) = @_;
-
-	# create_home_dir($home_id);
-
-	my $uid = `id -u`;
-	chomp $uid;
-	my $gid = `id -g`;
-	chomp $gid;
-
-	if (!-e $path)
-	{
-		logger "$path does not exist yet. Trying to create it...";
-
-		if (!mkpath($path))
-		{
-			logger "Error creating $path . Errno: $!";
-			return -1;
-		}
-
-		# Set perms on it as well
-		sudo_exec_without_decrypt('chown -Rf '.$uid.':'.$gid.' \''.$path.'\'');
-
-	}
-	else
-	{
-		# File or directory already exists
-		# Make sure it's owned by the agent
-		secure_path_without_decrypt('chattr-i', $path);
-	}
-
-	if (!chdir $path)
-	{
-		logger "Unable to change dir to '$path'.";
-		return -1;
-	}
-
-	return 0;
-}
-
 sub create_bash_scripts
 {
 	my ( $home_path, $bash_scripts_path, $precmd, $postcmd, @installcmds ) = @_;
@@ -1481,7 +1439,6 @@ sub start_rsync_install
 
   start_docker_install($home_id);
 
-
   return 1;
 
 }
@@ -1539,6 +1496,8 @@ sub master_server_update
 sub steam_cmd
 {
 	chomp(@_);
+	logger 'STEAM CALLED steam_cmd';
+	
 	return "Bad Encryption Key" unless(decrypt_param(pop(@_)) eq "Encryption checking OK");
 	return steam_cmd_without_decrypt(decrypt_params(@_));
 }
@@ -1549,6 +1508,7 @@ sub steam_cmd
 sub steam_cmd_without_decrypt
 {
 	my ($home_id, $home_path, $mod, $modname, $betaname, $betapwd, $user, $pass, $guard, $exec_folder_path, $exec_path, $precmd, $postcmd, $cfg_os, $filesToLockUnlock) = @_;
+	logger 'STEAM CALLED steam_cmd_without_decrypt';
 
 	start_docker_install($home_id);
 
@@ -1557,6 +1517,8 @@ sub steam_cmd_without_decrypt
 
 sub fetch_steam_version
 {
+	logger 'STEAM CALLED fetch_steam_version';
+	
 	return "Bad Encryption Key" unless(decrypt_param(pop(@_)) eq "Encryption checking OK");
 	my ($appId, $pureOutput) = &decrypt_params(@_);
 
@@ -1572,6 +1534,8 @@ sub fetch_steam_version
 
 sub installed_steam_version
 {
+	logger 'STEAM CALLED installed_steam_version';
+	
 	return "Bad Encryption Key" unless(decrypt_param(pop(@_)) eq "Encryption checking OK");
 	my ($game_home, $mod, $pureOutput) = &decrypt_params(@_);
 	my $appFile = $game_home."/steamapps/appmanifest_$mod.acf";
@@ -1587,6 +1551,8 @@ sub installed_steam_version
 
 sub automatic_steam_update
 {
+	logger 'STEAM CALLED automatic_steam_update';
+	
 	return "Bad Encryption Key" unless(decrypt_param(pop(@_)) eq "Encryption checking OK");
 	my ($home_id, $game_home, $server_ip, $server_port, $exec_path, $exec_folder_path,
 		$control_protocol, $control_password, $control_type,
