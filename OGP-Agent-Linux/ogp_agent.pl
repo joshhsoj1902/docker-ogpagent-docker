@@ -742,27 +742,13 @@ sub universal_start_without_decrypt
   my $game_instance_dir = GAME_DIR . '/' . $home_id;
   logger "game_instance_dir   $game_instance_dir";
 
-	if (is_screen_running_without_decrypt(SCREEN_TYPE_HOME, $home_id) == 1)
-	{
-		logger "This server is already running (ID: $home_id).";
-		return -14;
-	}
+  if (is_screen_running_without_decrypt(SCREEN_TYPE_HOME, $home_id) == 1)
+    {
+    logger "This server is already running (ID: $home_id).";
+    return -14;
+  }
 
-
-
-	start_docker_install($home_id);
-
-  #The game isn't installed yet on first launch meaning the config file isn't set up
-#   if (not -d $game_instance_dir) {
-#     start_docker_install($home_id);
-#     return 0;
-#   }
-
-#   gomplate_compose($home_id);
-
-#   my $installImageCmd = 'sudo ./helpers/doLocalInstall.sh ' . GAME_DIR . ' ' . $home_id;
-#   logger 'start command: ' . $installImageCmd;
-#   sudo_exec_without_decrypt($installImageCmd);
+  start_docker_install($home_id);
 
   my $cmd = 'sudo ./helpers/startService.sh ' . GAME_DIR . ' ' . $home_id;
   logger 'start command: ' . $cmd;
@@ -778,25 +764,14 @@ sub universal_start_without_decrypt
 sub renice_process
 {
   logger "renice_process";
-	return "Bad Encryption Key" unless(decrypt_param(pop(@_)) eq "Encryption checking OK");
-	return renice_process_without_decrypt(decrypt_params(@_));
-}
-
-sub renice_process_without_decrypt
-{
-  return 1;
+	return 1;
 }
 
 # This is used to force a process to run on a particular CPU
 sub force_cpu
 {
   logger "force_cpu";
-	return force_cpu_without_decrypt(decrypt_params(@_));
-}
-
-sub force_cpu_without_decrypt
-{
-  return 1;
+	return 1;
 }
 
 # Returns the number of CPUs available.
@@ -926,7 +901,6 @@ sub get_log
 # stop server function
 sub stop_server
 {
-  logger "stop_server";
 	chomp(@_);
 	return "Bad Encryption Key" unless(decrypt_param(pop(@_)) eq "Encryption checking OK");
 	return stop_server_without_decrypt(decrypt_params(@_));
@@ -942,7 +916,6 @@ sub stop_server_without_decrypt
 		$control_password, $control_type, $home_path) = @_;
 
   	my $service_name = $home_id . '_game';
-  	logger '$service_name ' .  $service_name;
 
   	my $docker_run_command = `sudo ./helpers/scaleService.sh '$service_name' 0`;
 	logger 'docker command: ' . $docker_run_command;
@@ -1034,27 +1007,10 @@ sub send_rcon_command
 sub dirlist
 {
   logger "dirlist";
-	return "Bad Encryption Key" unless(decrypt_param(pop(@_)) eq "Encryption checking OK");
-	my ($datadir) = &decrypt_param(@_);
-	logger "Asked for dirlist of $datadir directory.";
+  return "Bad Encryption Key" unless(decrypt_param(pop(@_)) eq "Encryption checking OK");
+  my ($datadir) = &decrypt_param(@_);
+  logger "Asked for dirlist of $datadir directory.";
   return "foo;bar";
-
-
-
-
-	if (!-d $datadir)
-	{
-		logger "ERROR - Directory [ $datadir ] not found!";
-		return -1;
-	}
-	if (!opendir(DIR, $datadir))
-	{
-		logger "ERROR - Can't open $datadir: $!";
-		return -2;
-	}
-	my @dirlist = readdir(DIR);
-	closedir(DIR);
-	return join(";", @dirlist);
 }
 
 ##### Returns a directory listing with extra info the filemanager
@@ -1065,11 +1021,10 @@ sub dirlist
 sub dirlistfm
 {
   logger "send_rcon_command";
-	return "Bad Encryption Key" unless(decrypt_param(pop(@_)) eq "Encryption checking OK");
-	my $datadir = &decrypt_param(@_);
+  return "Bad Encryption Key" unless(decrypt_param(pop(@_)) eq "Encryption checking OK");
+  my $datadir = &decrypt_param(@_);
 
-	logger "Asked for dirlist of $datadir directory.";
-
+  logger "Asked for dirlist of $datadir directory.";
   return 1;
 }
 
@@ -1090,12 +1045,12 @@ sub map_filepath
 sub readfile
 {
   logger "readfile";
-	return "Bad Encryption Key" unless(decrypt_param(pop(@_)) eq "Encryption checking OK");
-	chdir AGENT_RUN_DIR;
-	my $userfile = &decrypt_param(@_);
+  return "Bad Encryption Key" unless(decrypt_param(pop(@_)) eq "Encryption checking OK");
+#   chdir AGENT_RUN_DIR;
+  my $userfile = &decrypt_param(@_);
 
-	$userfile = map_filepath($userfile);
-  	parse_create_home_dir($userfile);
+  $userfile = map_filepath($userfile);
+  parse_create_home_dir($userfile);
 
   return "1; ";
 
