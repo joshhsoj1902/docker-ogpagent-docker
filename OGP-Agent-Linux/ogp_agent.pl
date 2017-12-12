@@ -748,17 +748,21 @@ sub universal_start_without_decrypt
 		return -14;
 	}
 
+
+
+	start_docker_install($home_id);
+
   #The game isn't installed yet on first launch meaning the config file isn't set up
-  if (not -d $game_instance_dir) {
-    start_docker_install($home_id);
-    return 0;
-  }
+#   if (not -d $game_instance_dir) {
+#     start_docker_install($home_id);
+#     return 0;
+#   }
 
-  gomplate_compose($home_id);
+#   gomplate_compose($home_id);
 
-  my $installImageCmd = 'sudo ./helpers/doLocalInstall.sh ' . GAME_DIR . ' ' . $home_id;
-  logger 'start command: ' . $installImageCmd;
-  sudo_exec_without_decrypt($installImageCmd);
+#   my $installImageCmd = 'sudo ./helpers/doLocalInstall.sh ' . GAME_DIR . ' ' . $home_id;
+#   logger 'start command: ' . $installImageCmd;
+#   sudo_exec_without_decrypt($installImageCmd);
 
   my $cmd = 'sudo ./helpers/startService.sh ' . GAME_DIR . ' ' . $home_id;
   logger 'start command: ' . $cmd;
@@ -1505,52 +1509,6 @@ sub start_rsync_install
 
   return 1;
 
-
-
-
-	secure_path_without_decrypt('chattr-i', $home_path);
-
-	create_secure_script($home_path, $exec_folder_path, $exec_path);
-
-	my $bash_scripts_path = MANUAL_TMP_DIR . "/home_id_" . $home_id;
-
-	if ( check_b4_chdir($bash_scripts_path) != 0)
-	{
-		return 0;
-	}
-
-	# Rsync install require the rsync binary to exist in the system
-	# to enable this functionality.
-	my $rsync_binary = Path::Class::File->new("/usr/bin", "rsync");
-
-	if (!-f $rsync_binary)
-	{
-		logger "Failed to start rsync update from "
-		  . $url
-		  . " to $home_path. Error: Rsync client not installed.";
-		return 0;
-	}
-
-	my $screen_id = create_screen_id(SCREEN_TYPE_UPDATE, $home_id);
-
-	my $log_file = Path::Class::File->new(SCREEN_LOGS_DIR, "screenlog.$screen_id");
-
-	# if(defined $filesToLockUnlock && $filesToLockUnlock ne ""){
-	# 	$postcmd .= "\n" . lock_additional_files_logic($home_path, $filesToLockUnlock, "lock", "str");
-	# }
-
-	backup_home_log( $home_id, $log_file );
-	my $path	= $home_path;
-	$path		=~ s/('+)/'\"$1\"'/g;
-	my @installcmds = ("/usr/bin/rsync --archive --compress --copy-links --update --verbose rsync://$url '$path'");
-	my $installfile = create_bash_scripts( $home_path, $bash_scripts_path, $precmd, $postcmd, @installcmds );
-
-	my $screen_cmd = create_screen_cmd($screen_id, "./$installfile");
-	logger "Running rsync update: /usr/bin/rsync --archive --compress --copy-links --update --verbose rsync://$url '$home_path'";
-	system($screen_cmd);
-
-	chdir AGENT_RUN_DIR;
-	return 1;
 }
 
 
@@ -1567,6 +1525,13 @@ sub start_docker_install
 	my $cmd = 'sudo ./helpers/setupHome.sh ' . GAME_DIR . ' ' . $home_id;
 	logger 'docker command: ' . $cmd;
 	sudo_exec_without_decrypt($cmd);
+
+	gomplate_compose($home_id);
+
+	my $installImageCmd = 'sudo ./helpers/doLocalInstall.sh ' . GAME_DIR . ' ' . $home_id;
+	logger 'start command: ' . $installImageCmd;
+	sudo_exec_without_decrypt($installImageCmd);	
+
     return 1;
 }
 
@@ -1657,91 +1622,93 @@ sub steam_cmd_without_decrypt
 {
 	my ($home_id, $home_path, $mod, $modname, $betaname, $betapwd, $user, $pass, $guard, $exec_folder_path, $exec_path, $precmd, $postcmd, $cfg_os, $filesToLockUnlock) = @_;
 
-	if ( check_b4_chdir($home_path) != 0)
-	{
-		return 0;
-	}
+	return 1;
 
-	secure_path_without_decrypt('chattr-i', $home_path);
-
-	create_secure_script($home_path, $exec_folder_path, $exec_path);
-
-	my $bash_scripts_path = MANUAL_TMP_DIR . "/home_id_" . $home_id;
-
-	if ( check_b4_chdir($bash_scripts_path) != 0)
-	{
-		return 0;
-	}
-
-	my $screen_id = create_screen_id(SCREEN_TYPE_UPDATE, $home_id);
-	my $screen_id_for_txt_update = substr ($screen_id, rindex($screen_id, '_') + 1);
-	my $steam_binary = Path::Class::File->new(STEAMCMD_CLIENT_DIR, "steamcmd.sh");
-	my $installSteamFile =  $screen_id_for_txt_update . "_install.txt";
-
-	my $installtxt = Path::Class::File->new(STEAMCMD_CLIENT_DIR, $installSteamFile);
-	open  FILE, '>', $installtxt;
-	print FILE "\@ShutdownOnFailedCommand 1\n";
-	print FILE "\@NoPromptForPassword 1\n";
-	if($cfg_os eq 'windows')
-	{
-		print FILE "\@sSteamCmdForcePlatformType windows\n";
-	}
-	if($guard ne '')
-	{
-		print FILE "set_steam_guard_code $guard\n";
-	}
-	if($user ne '' && $user ne 'anonymous')
-	{
-		print FILE "login $user $pass\n";
-	}
-	else
-	{
-		print FILE "login anonymous\n";
-	}
-
-	print FILE "force_install_dir \"$home_path\"\n";
-
-	if($modname ne "")
-	{
-		print FILE "app_set_config $mod mod $modname\n";
-		print FILE "app_update $mod mod $modname validate\n";
-	}
-
-	if($betaname ne "" && $betapwd ne "")
-	{
-		print FILE "app_update $mod -beta $betaname -betapassword $betapwd\n";
-	}
-	elsif($betaname ne "" && $betapwd eq "")
-	{
-		print FILE "app_update $mod -beta $betaname\n";
-	}
-	else
-	{
-		print FILE "app_update $mod\n";
-	}
-
-	print FILE "exit\n";
-	close FILE;
-
-	my $log_file = Path::Class::File->new(SCREEN_LOGS_DIR, "screenlog.$screen_id");
-	backup_home_log( $home_id, $log_file );
-
-	my $postcmd_mod = $postcmd;
-
-	# if(defined $filesToLockUnlock && $filesToLockUnlock ne ""){
-	# 	$postcmd_mod .= "\n" . lock_additional_files_logic($home_path, $filesToLockUnlock, "lock", "str");
+	# if ( check_b4_chdir($home_path) != 0)
+	# {
+	# 	return 0;
 	# }
 
-	my @installcmds = ("$steam_binary +runscript $installtxt +exit");
+	# secure_path_without_decrypt('chattr-i', $home_path);
 
-	my $installfile = create_bash_scripts( $home_path, $bash_scripts_path, $precmd, $postcmd_mod, @installcmds );
+	# create_secure_script($home_path, $exec_folder_path, $exec_path);
 
-	my $screen_cmd = create_screen_cmd($screen_id, "./$installfile");
+	# my $bash_scripts_path = MANUAL_TMP_DIR . "/home_id_" . $home_id;
 
-	logger "Running steam update: $steam_binary +runscript $installtxt +exit";
-	system($screen_cmd);
+	# if ( check_b4_chdir($bash_scripts_path) != 0)
+	# {
+	# 	return 0;
+	# }
 
-	return 1;
+	# my $screen_id = create_screen_id(SCREEN_TYPE_UPDATE, $home_id);
+	# my $screen_id_for_txt_update = substr ($screen_id, rindex($screen_id, '_') + 1);
+	# my $steam_binary = Path::Class::File->new(STEAMCMD_CLIENT_DIR, "steamcmd.sh");
+	# my $installSteamFile =  $screen_id_for_txt_update . "_install.txt";
+
+	# my $installtxt = Path::Class::File->new(STEAMCMD_CLIENT_DIR, $installSteamFile);
+	# open  FILE, '>', $installtxt;
+	# print FILE "\@ShutdownOnFailedCommand 1\n";
+	# print FILE "\@NoPromptForPassword 1\n";
+	# if($cfg_os eq 'windows')
+	# {
+	# 	print FILE "\@sSteamCmdForcePlatformType windows\n";
+	# }
+	# if($guard ne '')
+	# {
+	# 	print FILE "set_steam_guard_code $guard\n";
+	# }
+	# if($user ne '' && $user ne 'anonymous')
+	# {
+	# 	print FILE "login $user $pass\n";
+	# }
+	# else
+	# {
+	# 	print FILE "login anonymous\n";
+	# }
+
+	# print FILE "force_install_dir \"$home_path\"\n";
+
+	# if($modname ne "")
+	# {
+	# 	print FILE "app_set_config $mod mod $modname\n";
+	# 	print FILE "app_update $mod mod $modname validate\n";
+	# }
+
+	# if($betaname ne "" && $betapwd ne "")
+	# {
+	# 	print FILE "app_update $mod -beta $betaname -betapassword $betapwd\n";
+	# }
+	# elsif($betaname ne "" && $betapwd eq "")
+	# {
+	# 	print FILE "app_update $mod -beta $betaname\n";
+	# }
+	# else
+	# {
+	# 	print FILE "app_update $mod\n";
+	# }
+
+	# print FILE "exit\n";
+	# close FILE;
+
+	# my $log_file = Path::Class::File->new(SCREEN_LOGS_DIR, "screenlog.$screen_id");
+	# backup_home_log( $home_id, $log_file );
+
+	# my $postcmd_mod = $postcmd;
+
+	# # if(defined $filesToLockUnlock && $filesToLockUnlock ne ""){
+	# # 	$postcmd_mod .= "\n" . lock_additional_files_logic($home_path, $filesToLockUnlock, "lock", "str");
+	# # }
+
+	# my @installcmds = ("$steam_binary +runscript $installtxt +exit");
+
+	# my $installfile = create_bash_scripts( $home_path, $bash_scripts_path, $precmd, $postcmd_mod, @installcmds );
+
+	# my $screen_cmd = create_screen_cmd($screen_id, "./$installfile");
+
+	# logger "Running steam update: $steam_binary +runscript $installtxt +exit";
+	# system($screen_cmd);
+
+	# return 1;
 }
 
 sub fetch_steam_version
