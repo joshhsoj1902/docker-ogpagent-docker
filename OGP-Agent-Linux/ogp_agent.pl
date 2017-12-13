@@ -1414,6 +1414,7 @@ sub create_home_dir
 ### @return -3 If resources unavailable.
 sub master_server_update
 {
+	logger "CALLED master_server_update"
 	return "Bad Encryption Key" unless(decrypt_param(pop(@_)) eq "Encryption checking OK");
 	my ($home_id,$home_path,$ms_home_id,$ms_home_path,$exec_folder_path,$exec_path,$precmd,$postcmd) = decrypt_params(@_);
 
