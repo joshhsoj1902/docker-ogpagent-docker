@@ -1414,7 +1414,7 @@ sub create_home_dir
 ### @return -3 If resources unavailable.
 sub master_server_update
 {
-	logger "CALLED master_server_update"
+	logger "CALLED master_server_update";
 	return "Bad Encryption Key" unless(decrypt_param(pop(@_)) eq "Encryption checking OK");
 	my ($home_id,$home_path,$ms_home_id,$ms_home_path,$exec_folder_path,$exec_path,$precmd,$postcmd) = decrypt_params(@_);
 
@@ -1554,6 +1554,8 @@ sub automatic_steam_update
 
 sub rsync_progress
 {
+	logger "CALLED rsyn progress";
+	
 	return "Bad Encryption Key" unless(decrypt_param(pop(@_)) eq "Encryption checking OK");
 	my ($running_home) = &decrypt_param(@_);
 	logger "User requested progress on rsync job on home $running_home.";
@@ -1571,6 +1573,8 @@ sub rsync_progress
 
 sub is_file_download_in_progress
 {
+	logger "CALLED is file download in progress";
+	
 	return "Bad Encryption Key" unless(decrypt_param(pop(@_)) eq "Encryption checking OK");
 	my ($pid) = &decrypt_param(@_);
 	logger "User requested if download is in progress with pid $pid.";
