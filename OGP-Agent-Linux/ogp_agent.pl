@@ -1414,6 +1414,7 @@ sub create_home_dir
 ### @return -3 If resources unavailable.
 sub master_server_update
 {
+	logger "CALLED master_server_update";
 	return "Bad Encryption Key" unless(decrypt_param(pop(@_)) eq "Encryption checking OK");
 	my ($home_id,$home_path,$ms_home_id,$ms_home_path,$exec_folder_path,$exec_path,$precmd,$postcmd) = decrypt_params(@_);
 
@@ -1553,6 +1554,8 @@ sub automatic_steam_update
 
 sub rsync_progress
 {
+	logger "CALLED rsyn progress";
+	
 	return "Bad Encryption Key" unless(decrypt_param(pop(@_)) eq "Encryption checking OK");
 	my ($running_home) = &decrypt_param(@_);
 	logger "User requested progress on rsync job on home $running_home.";
@@ -1570,6 +1573,8 @@ sub rsync_progress
 
 sub is_file_download_in_progress
 {
+	logger "CALLED is file download in progress";
+	
 	return "Bad Encryption Key" unless(decrypt_param(pop(@_)) eq "Encryption checking OK");
 	my ($pid) = &decrypt_param(@_);
 	logger "User requested if download is in progress with pid $pid.";
@@ -1594,6 +1599,8 @@ sub uncompress_file
 
 sub uncompress_file_without_decrypt
 {
+
+	logger "CALLED uncomress";
 
 	# File must include full path.
 	my ($file, $destination) = @_;
@@ -1646,6 +1653,8 @@ sub compress_files
 
 sub compress_files_without_decrypt
 {
+	logger "CALLED compress";
+	
 	my ($files,$destination,$archive_name,$archive_type) = @_;
 
 	if (!-e $destination)
@@ -1790,6 +1799,8 @@ sub compress_files_without_decrypt
 
 sub discover_ips
 {
+	logger "CALLED discover ips";
+	
 	return "Bad Encryption Key" unless(decrypt_param(pop(@_)) eq "Encryption checking OK");
 	my ($check) = decrypt_params(@_);
 
@@ -1799,7 +1810,7 @@ sub discover_ips
 		return "";
 	}
 
-	my $iplist = "0.0.0.0";
+	my $iplist = '0.0.0.0';
 	my $ipfound;
 	my $junk;
 
@@ -1838,6 +1849,8 @@ sub discover_ips
 ### Return 1;content in case of success
 sub mon_stats
 {
+	logger "CALLED mon stats";
+	
 	return "Bad Encryption Key" unless(decrypt_param(pop(@_)) eq "Encryption checking OK");
 	my ($mon_stats) = decrypt_params(@_);
 	if ($mon_stats ne "mon_stats")
@@ -1870,38 +1883,14 @@ sub clone_home
 	my ($source_home, $dest_home, $owner) = decrypt_params(@_);
 	my ($time_start, $time_stop, $time_diff);
 	logger "Copying from $source_home to $dest_home...";
-
-	# check size of source_home, make sure we have space to copy
-	if (!-e $source_home)
-	{
-		logger "ERROR - $source_home does not exist";
-		return 0;
-	}
-	logger "Game home $source_home exists...copy will proceed";
-
-	# start the copy, and a timer
-	$time_start = time();
-	if (!dircopy("$source_home", "$dest_home"))
-	{
-		$time_stop = time();
-		$time_diff = $time_stop - $time_start;
-		logger
-		  "Error occured after $time_diff seconds during copy of $source_home to $dest_home - $!";
-		return 0;
-	}
-	else
-	{
-		$time_stop = time();
-		$time_diff = $time_stop - $time_start;
-		logger
-		  "Home clone completed successfully to $dest_home in $time_diff seconds";
-		return 1;
-	}
+	return 1;
 }
 
 # used to delete the game home from the file system when it's removed from the panel
 sub remove_home
 {
+	logger "CALLED remove home";
+	
 	return "Bad Encryption Key" unless(decrypt_param(pop(@_)) eq "Encryption checking OK");
 	my ($home_path_del) = decrypt_params(@_);
 
@@ -1930,6 +1919,8 @@ sub restart_server
 ## return 1 Restart OK
 sub restart_server_without_decrypt
 {
+	logger "CALLED restart server";
+	
 	my ($home_id, $server_ip, $server_port, $control_protocol,
 		$control_password, $control_type, $home_path, $server_exe, $run_dir,
 		$cmd, $cpu, $nice, $preStart, $envVars) = @_;
@@ -1986,6 +1977,8 @@ sub secure_path
 
 sub secure_path_without_decrypt
 {
+	logger "CALLED secure path";
+	
 	my ($action, $file_path, $returnType) = @_;
 	my $checkIfFileExists = 1;
 
@@ -2026,6 +2019,8 @@ sub secure_path_without_decrypt
 
 sub get_chattr
 {
+	logger "CALLED chattr";
+	
 	return "Bad Encryption Key" unless(decrypt_param(pop(@_)) eq "Encryption checking OK");
 	my ($file_path) = decrypt_params(@_);
 	my $file = $file_path;
@@ -2043,6 +2038,8 @@ sub mock_ftp_mgr
 
 sub start_fastdl
 {
+	logger "CALLED start fastdl";
+	
 	if(-e Path::Class::File->new(FD_DIR, 'Settings.pm'))
 	{
 		system('perl FastDownload/ForkedDaemon.pm &');
@@ -2063,6 +2060,8 @@ sub stop_fastdl
 
 sub stop_fastdl_without_decrypt
 {
+	logger "CALLED stop fastdl";
+	
 	my $pid;
 	open(PIDFILE, '<', FD_PID_FILE)
 	  || logger "Error reading pid file $!",1;
@@ -2093,6 +2092,8 @@ sub restart_fastdl
 
 sub restart_fastdl_without_decrypt
 {
+	logger "CALLED restart fastdl";
+	
 	if((fastdl_status_without_decrypt() == -1) || (stop_fastdl_without_decrypt() == 1))
 	{
 		if(start_fastdl() == 1)
@@ -2115,6 +2116,8 @@ sub fastdl_status
 
 sub fastdl_status_without_decrypt
 {
+	logger "CALLED fastdl status";
+	
 	my $pid;
 	if(!open(PIDFILE, '<', FD_PID_FILE))
 	{
@@ -2140,6 +2143,8 @@ sub fastdl_status_without_decrypt
 
 sub fastdl_get_aliases
 {
+	logger "CALLED fastdl get aliases";
+	
 	return "Bad Encryption Key" unless(decrypt_param(pop(@_)) eq "Encryption checking OK");
 	my %aliases;
 	my $i;
@@ -2188,6 +2193,8 @@ sub fastdl_get_aliases
 
 sub fastdl_del_alias
 {
+	logger "CALLED fastdl del alias";
+	
 	return "Bad Encryption Key" unless(decrypt_param(pop(@_)) eq "Encryption checking OK");
 	foreach my $alias (decrypt_params(@_))
 	{
@@ -2198,6 +2205,8 @@ sub fastdl_del_alias
 
 sub fastdl_add_alias
 {
+	logger "CALLED fastdl add alias";
+	
 	return "Bad Encryption Key" unless(decrypt_param(pop(@_)) eq "Encryption checking OK");
 	my ($alias,$home,$match_file_extension,$match_client_ip) = decrypt_params(@_);
 	if(!-e FD_ALIASES_DIR)
@@ -2226,6 +2235,8 @@ sub fastdl_add_alias
 
 sub fastdl_get_info
 {
+	logger "CALLED fastdl get info";
+	
 	return "Bad Encryption Key" unless(decrypt_param(pop(@_)) eq "Encryption checking OK");
 	if(-e Path::Class::File->new(FD_DIR, 'Settings.pm'))
 	{
@@ -2245,6 +2256,8 @@ sub fastdl_get_info
 
 sub fastdl_create_config
 {
+	logger "CALLED fastdl create config";
+	
 	return "Bad Encryption Key" unless(decrypt_param(pop(@_)) eq "Encryption checking OK");
 	if(!-e FD_DIR)
 	{
@@ -2278,6 +2291,8 @@ sub fastdl_create_config
 
 sub agent_restart
 {
+	logger "CALLED agent restart";
+	
 	return "Bad Encryption Key" unless(decrypt_param(pop(@_)) eq "Encryption checking OK");
 	my $dec_check = decrypt_param(@_);
 	if ($dec_check eq 'restart')
@@ -2354,6 +2369,8 @@ sub scheduler_list_tasks
 
 sub get_file_part
 {
+	logger "CALLED get file part";
+	
 	return "Bad Encryption Key" unless(decrypt_param(pop(@_)) eq "Encryption checking OK");
 	my ($file, $offset) = decrypt_params(@_);
 	if (!open(FILE, '<', $file))
@@ -2391,6 +2408,8 @@ sub get_file_part
 
 sub stop_update
 {
+	logger "CALLED stop update";
+	
 	return "Bad Encryption Key" unless(decrypt_param(pop(@_)) eq "Encryption checking OK");
 	my $home_id = decrypt_param(@_);
 	my $screen_id = create_screen_id(SCREEN_TYPE_UPDATE, $home_id);
@@ -2404,6 +2423,8 @@ sub stop_update
 
 sub shell_action
 {
+	logger "CALLED shell action";
+	
 	return "Bad Encryption Key" unless(decrypt_param(pop(@_)) eq "Encryption checking OK");
 	my ($action, $arguments) = decrypt_params(@_);
 
@@ -2581,6 +2602,8 @@ sub shell_action
 
 sub remote_query
 {
+	logger "CALLED remote query";
+	
 	return "Bad Encryption Key" unless(decrypt_param(pop(@_)) eq "Encryption checking OK");
 	my ($protocol, $game_type, $ip, $c_port, $q_port, $s_port) = decrypt_params(@_);
 	my $command = "which php-cgi 2>&1;echo \$?";
