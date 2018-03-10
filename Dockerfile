@@ -27,10 +27,10 @@ RUN curl -sSLf -z /usr/local/bin/gomplate -o /usr/local/bin/gomplate https://git
 
 COPY templates /opt/OGP/templates
 
+RUN chown -R ogp_agent:ogp_agent /opt/OGP/ \
+ && rm -rf /opt/agent
+
 COPY OGP-Agent-Linux /opt/OGP
 
-RUN rm -rf /opt/agent
-
-RUN chown --preserve-root -R ogp_agent /opt/OGP/
-
+RUN chown -R ogp_agent:ogp_agent
 HEALTHCHECK CMD ./docker-health.sh
