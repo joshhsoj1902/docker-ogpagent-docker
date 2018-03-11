@@ -33,4 +33,5 @@ RUN chown -R ogp_agent:ogp_agent /opt/OGP/ \
 COPY OGP-Agent-Linux /opt/OGP
 
 RUN chown -R ogp_agent:ogp_agent /opt/OGP/
+
 HEALTHCHECK CMD ./docker-health.sh
