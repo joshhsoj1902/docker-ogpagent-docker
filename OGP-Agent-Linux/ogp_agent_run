@@ -134,7 +134,7 @@ init() {
 
 		if [ "$agent_auto_update" -eq "1" ]
 		then
-			AUTO_UPDATE="yes"
+			AUTO_UPDATE="no"
 		fi
 
 		# Use custom github update address
@@ -146,7 +146,7 @@ init() {
 		fi
 
 	else
-		AUTO_UPDATE="yes"
+		AUTO_UPDATE="no"
 	fi
 
 	while test $# -gt 0; do
@@ -286,7 +286,6 @@ update() {
 run() {
 	getSudoPassword
 	detectSystemD
-	update
 	if test -n "$RESTART" ; then
 		echo "Agent will auto-restart if there is a crash."
 		#loop forever
