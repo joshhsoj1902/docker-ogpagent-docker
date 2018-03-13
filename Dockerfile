@@ -18,6 +18,8 @@ RUN curl -fsSL https://download.docker.com/linux/ubuntu/gpg | apt-key add - \
  && apt-cache policy docker-ce \
  && apt-get install -y  docker-ce
 
+RUN sudo usermod -aG docker ogp_agent
+
 ADD ogpmanager.sh /usr/local/bin/
 RUN mv /usr/local/bin/ogpmanager.sh /usr/local/bin/ogpmanager \
     && chmod +x /usr/local/bin/ogpmanager
@@ -32,6 +34,7 @@ RUN chown -R ogp_agent:ogp_agent /opt/OGP/ \
 
 COPY OGP-Agent-Linux /opt/OGP
 
-RUN chown -R ogp_agent:ogp_agent /opt/OGP/
+RUN chown -R ogp_agent:ogp_agent /opt/OGP/ \
+ && chmod 777 /opt
 
 HEALTHCHECK CMD ./docker-health.sh

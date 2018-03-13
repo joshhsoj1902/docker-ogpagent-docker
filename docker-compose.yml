@@ -27,3 +27,6 @@ services:
       - OGP_AUTORESTART_SERVER=1
       - OGP_DOCKER_NAMESPACE=joshhsoj1902
       - OGP_SWARM_LABEL=games  #TODO: Make this actually do something (it's actually hardcoded)
+      - STORAGE=nfs
+      - STORAGE_NFS_ADDRESS=192.168.0.110
+      - STORAGE_NFS_PATH=/mnt/Filelord_main/docker/legacy-ogp/
