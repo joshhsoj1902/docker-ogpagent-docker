@@ -4,13 +4,13 @@
 /usr/local/bin/gomplate -f /opt/OGP/templates/Config.tmpl.yml -o /opt/OGP/Cfg/Config.yml
 /usr/local/bin/gomplate -f /opt/OGP/templates/Preferences.pm.tmpl -o /opt/OGP/Cfg/Preferences.pm
 
-bind_ingress=`docker network inspect --format='{{ (index .IPAM.Config 0).Gateway }}' ingress`
-bind_gateway=`docker network inspect --format='{{ (index .IPAM.Config 0).Gateway }}' docker_gwbridge`
+echo 'storage: '${STORAGE}} > /opt/OGP/Cfg/storage.yml
+echo 'storage_nfs_address: '${STORAGE_NFS_ADDRESS} >> /opt/OGP/Cfg/storage.yml
+echo 'storage_nfs_path: '${STORAGE_NFS_PATH} >> /opt/OGP/Cfg/storage.yml
 
-echo 'bind_gateway: '$bind_gateway > /opt/OGP/Cfg/bind.yml
-echo 'bind_ingress: '$bind_ingress >> /opt/OGP/Cfg/bind.yml
-
-echo 'The bindGW '$bind_gateway
+      - STORAGE=NFS
+      - STORAGE_NFS_ADDRESS=192.168.0.110
+      - STORAGE_NFS_PATH
 
 chmod +x /opt/OGP/ogp_agent_run
 echo "Starting DockerOGP"
