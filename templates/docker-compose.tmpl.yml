@@ -1,12 +1,12 @@
 version: '3.2'
-{{if contains (getenv "STORAGE") "NFS"}}
+{{if contains ((datasource "globalConfig").storage) "NFS"}}
 volumes:
   ogp_{{(datasource "home").homeId}}_storage:
     driver: local
     driver_opts:
       type: nfs
-      o: addr={{.Env.STORAGE_NFS_ADDRESS}},rw
-      device: ":{{.Env.STORAGE_NFS_PATH}}"
+      o: addr={{(datasource "globalConfig").storage_nfs_address}},rw
+      device: ":{{(datasource "globalConfig").storage_nfs_path}}"
 {{end}}
 services:    
   game:
@@ -22,7 +22,7 @@ services:
         mode: host
     volumes:
       - "/home/steam/linuxgsm/logs"
-{{if contains (getenv "STORAGE") "NFS"}}
+{{if contains (datasource "globalConfig").storage) "NFS"}}
       - "ogp_{{(datasource "home").homeId}}_storage:/home/steam/linuxgsm/serverfiles/{{(datasource "config").dataVol1}}"
 {{else}}
       - "/home/steam/linuxgsm/serverfiles/{{(datasource "config").dataVol1}}"
