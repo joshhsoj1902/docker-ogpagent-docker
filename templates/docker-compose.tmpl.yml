@@ -6,8 +6,6 @@ volumes:
     driver_opts:
       type: nfs/
       o: addr={{(datasource "globalConfig").storage_nfs_address}},rw
-      # this works great, BUT the folder needs to exist to mount it... :(
-        # Can i, in a bash script. create that directory if it's not there
       device: ":{{(datasource "globalConfig").storage_nfs_path}}/{{(datasource "home").homeId}}"
 {{end}}
 services:    
