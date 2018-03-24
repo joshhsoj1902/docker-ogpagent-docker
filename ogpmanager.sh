@@ -8,10 +8,6 @@ echo 'storage: '${STORAGE} > /opt/OGP/Cfg/Config.yml
 echo 'storage_nfs_address: '${STORAGE_NFS_ADDRESS} >> /opt/OGP/Cfg/Config.yml
 echo 'storage_nfs_path: '${STORAGE_NFS_PATH} >> /opt/OGP/Cfg/Config.yml
 
-      - STORAGE=NFS
-      - STORAGE_NFS_ADDRESS=192.168.0.110
-      - STORAGE_NFS_PATH
-
 chmod +x /opt/OGP/ogp_agent_run
 echo "Starting DockerOGP"
 
