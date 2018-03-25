@@ -15,11 +15,9 @@ services:
       - target: {{(datasource "config").port}}
         published: {{(datasource "config").port}}
         protocol: tcp
-        mode: host
       - target: {{(datasource "config").port}}
         published: {{(datasource "config").port}}
         protocol: udp
-        mode: host
     volumes:
       - "/home/steam/linuxgsm/logs"
 {{if contains (datasource "globalConfig").storage "NFS"}}
