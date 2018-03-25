@@ -23,7 +23,7 @@ services:
     volumes:
       - "/home/steam/linuxgsm/logs"
 {{if contains (datasource "globalConfig").storage "NFS"}}
-      - "ogp_{{(datasource "home").homeId}}_storage:/home/steam/linuxgsm/serverfiles/{{(datasource "config").dataVol1}}"
+      - "ogp_{{(datasource "home").homeId}}_storage:/home/steam/linuxgsm/serverfiles/{{(datasource "config").dataVol1}}:nocopy"
 {{else}}
       - "/home/steam/linuxgsm/serverfiles/{{(datasource "config").dataVol1}}"
 {{end}}
