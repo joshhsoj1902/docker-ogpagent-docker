@@ -1,4 +1,13 @@
 version: '3.2'
+{{if contains (datasource "globalConfig").storage "NFS"}}
+volumes:
+  ogp_{{(datasource "home").homeId}}_storage:
+    driver: local
+    driver_opts:
+      type: nfs/
+      o: addr={{(datasource "globalConfig").storage_nfs_address}},rw
+      device: ":{{(datasource "globalConfig").storage_nfs_path}}/{{(datasource "home").homeId}}"
+{{end}}
 services:    
   game:
     image: {{(datasource "config").namespace}}/{{(datasource "config").image}}:{{(datasource "config").version}}
@@ -13,7 +22,11 @@ services:
         mode: host
     volumes:
       - "/home/steam/linuxgsm/logs"
+{{if contains (datasource "globalConfig").storage "NFS"}}
+      - "ogp_{{(datasource "home").homeId}}_storage:/home/steam/linuxgsm/serverfiles/{{(datasource "config").dataVol1}}"
+{{else}}
       - "/home/steam/linuxgsm/serverfiles/{{(datasource "config").dataVol1}}"
+{{end}}
     deploy:
       mode: replicated
       replicas: 1
@@ -22,7 +35,5 @@ services:
         constraints:
           - node.labels.games == true
     environment:
-      - bind_gateway={{(datasource "bind").bind_gateway}}
-      - bind_ingress={{(datasource "bind").bind_ingress}}
       - LGSM_PORT={{(datasource "config").port}}
       - LGSM_MAXPLAYERS={{(datasource "config").maxplayers}}
