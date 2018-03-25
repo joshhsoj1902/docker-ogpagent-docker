@@ -4,7 +4,7 @@ volumes:
   ogp_{{(datasource "home").homeId}}_storage:
     driver: local
     driver_opts:
-      type: nfs/
+      type: nfs
       o: addr={{(datasource "globalConfig").storage_nfs_address}},rw
       device: ":{{(datasource "globalConfig").storage_nfs_path}}/{{(datasource "home").homeId}}"
 {{end}}
