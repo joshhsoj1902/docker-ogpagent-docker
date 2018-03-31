@@ -1,10 +1,17 @@
+defaults: &defaults 
+    working_directory: ~/build
+    docker: 
+      - image: joshhsoj1902/circleci-build-image:latest
+remote_docker_version: &remote_docker_version
+    version: 17.11.0-ce
 version: 2
 jobs:
   build:
-    working_directory: ~/ogp
-    machine: true
+    <<: *defaults
     steps:
       - checkout
+      - setup_remote_docker:
+          <<: *remote_docker_version
       - run:
           name: "Build Image"
           command: |
