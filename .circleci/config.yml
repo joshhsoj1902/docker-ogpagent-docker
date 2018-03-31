@@ -13,14 +13,19 @@ jobs:
       - setup_remote_docker:
           <<: *remote_docker_version
       - run:
-          name: "Build Image"
+          name: Build Image
           command: |
             make build
       - run:
-          name: "Test"
+          name: Run agent
+          background: true
+          command: |
+            #TODO: Rather then leaving this on in the background, we should just add `-d` and pull out all the logs at he end 
+            docker-compose -f docker-compose.test.yml up
+      - run:
+          name: Test
           command: |
             # docker run -d --name agent joshhsoj1902/docker-ogpagent-docker:latest
-            docker-compose -f docker-compose.test.yml up -d
             retry -v -s 5 -x 120 -t 1000 'docker-compose -f docker-compose.test.yml exec agent "/docker-health.sh"'
             docker ps
-            
+
