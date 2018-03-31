@@ -9,7 +9,7 @@ services:
     #   - "27015:27015/udp"
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
-      - ./tests/data:/tests/data
+      - ./tests:/tests
     environment:
       - OGP_LOGFILE=/opt/OGP/ogp_agent.log
       - OGP_GAME_DIR=/opt/games
