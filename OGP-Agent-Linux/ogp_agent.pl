@@ -111,8 +111,8 @@ if ($< == 0)
 ### @param line the line that is put to the log file.
 sub logger
 {
-	my $logcmd	 = $_[0];
-	my $also_print = 0;
+	my $logcmd	 = $_[0]
+	my $also_print = 0
 
 	if (@_ == 2)
 	{
