@@ -1,0 +1,6 @@
+port: 27015
+namespace: joshhsoj1902 
+image: linuxgsm-docker 
+dataVol1: / 
+maxplayers: 8
+version: latest
