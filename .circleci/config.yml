@@ -21,6 +21,6 @@ jobs:
           command: |
             # docker run -d --name agent joshhsoj1902/docker-ogpagent-docker:latest
             docker-compose -f docker-compose.test.yml up -d
-            sleep 60
+            retry -v -s 5 -x 120 -t 1000 'docker-compose -f docker-compose.test.yml exec agent "/docker-health.sh"'
             docker ps
-            docker-compose -f docker-compose.test.yml exec agent "/docker-health.sh"
+            
