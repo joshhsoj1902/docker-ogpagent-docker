@@ -37,4 +37,7 @@ COPY OGP-Agent-Linux /opt/OGP
 RUN chown -R ogp_agent:ogp_agent /opt/OGP/ \
  && chmod 777 /opt
 
+# Ideally this wouldn't be here... but for now it's easy
+COPY tests /tests
+
 HEALTHCHECK CMD ./docker-health.sh
