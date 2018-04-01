@@ -7,6 +7,8 @@
 echo 'storage: '${STORAGE} > /opt/OGP/Cfg/Config.yml
 echo 'storage_nfs_address: '${STORAGE_NFS_ADDRESS} >> /opt/OGP/Cfg/Config.yml
 echo 'storage_nfs_path: '${STORAGE_NFS_PATH} >> /opt/OGP/Cfg/Config.yml
+# echo 'docker_hub_namespace: '${OGP_DOCKER_NAMESPACE} >> /opt/OGP/Cfg/Config.yml
+# echo 'docker_gcloud_namespace: '${OGP_GCLOUD_NAMESPACE} >> /opt/OGP/Cfg/Config.yml
 
 chmod +x /opt/OGP/ogp_agent_run
 echo "Starting DockerOGP"

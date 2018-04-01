@@ -22,14 +22,11 @@ jobs:
           command: |
             pwd
             #TODO: Rather then leaving this on in the background, we should just add `-d` and pull out all the logs at he end 
-            docker-compose -f docker-compose.test.yml up
+            docker-compose up
       - run:
           name: Test
           command: |
             # docker run -d --name agent joshhsoj1902/docker-ogpagent-docker:latest
-            retry -v -s 5 -t 30 'docker-compose -f docker-compose.test.yml exec agent "/docker-health.sh"'
-            docker ps
-            # docker-compose -f docker-compose.test.yml exec agent "ls -ltr"
-            # docker-compose -f docker-compose.test.yml exec agent "ls -ltr /"
-            docker-compose -f docker-compose.test.yml exec agent "/tests/start-server.sh"
+            retry -v -s 5 -t 30 'docker-compose exec agent "/docker-health.sh"' #ensure service itself is healthy
+            make test
 
