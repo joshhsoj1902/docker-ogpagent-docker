@@ -13,6 +13,12 @@ jobs:
       - setup_remote_docker:
           <<: *remote_docker_version
       - run:
+          name: Prep swarm
+          command: |
+            docker swarm init 
+            docker node update --label-add=game=true $(docker node ls -q)
+            docker node update --label-add=games=true $(docker node ls -q) 
+      - run:
           name: Build Image
           command: |
             make build
@@ -26,7 +32,6 @@ jobs:
       - run:
           name: Test
           command: |
-            docker swarm init 
             # docker run -d --name agent joshhsoj1902/docker-ogpagent-docker:latest
             retry -v -s 5 -t 30 'docker-compose exec agent "/docker-health.sh"' #ensure service itself is healthy
             make test
