@@ -4,7 +4,7 @@ secrets:
     external: true
 services:
   gcloud:
-    image: joshhsoj1902/google-cloud-sdk-docker:latest@sha256:ef95cf20cb41cc1977031ba80f37193bbc5660df9a58363cb2693c40467af025
+    image: joshhsoj1902/google-cloud-sdk-docker:0.0.1
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
     secrets:
