@@ -9,13 +9,13 @@ configNamespace='{{(datasource "config").namespace}}'
 dockerNamespace='{{(datasource "globalConfig").docker_hub_namespace}}'
 gcloudNamespace='{{(datasource "globalConfig").docker_gcloud_namespace}}'
 
-if [ ${dockerNamespace} -gt 0 ] && [ "$configNamespace" = "$dockerNamespace" ]; then
+if [ ! -z "$dockerNamespace" ] && [ "$configNamespace" = "$dockerNamespace" ]; then
     echo "Using dockerhub"
     exit 0
     # Dockerhub services can be installed on the worker
 fi
 
-if [ ${gcloudNamespace} -gt 0 ] && [ "$configNamespace" = "$gcloudNamespace" ]; then
+if [ ! -z "$gcloudNamespace" ] && [ "$configNamespace" = "$gcloudNamespace" ]; then
     echo "Using gcloud"
     docker stack rm $home_id'_install';
     sleep 10;
@@ -24,7 +24,7 @@ if [ ${gcloudNamespace} -gt 0 ] && [ "$configNamespace" = "$gcloudNamespace" ]; 
     # image will be downloaded in the background
 fi
 
-if [ ${dockerNamespace} -gt 0 ] || [ ${gcloudNamespace} -gt 0 ]; then
+if [ ! -z "$dockerNamespace" ] || [ ! -z "$gcloudNamespace" ]; then
     echo "Namespace error" #TODO. make this blocking
     exit 1
     # If a namespace is defined, the image must match one of them
