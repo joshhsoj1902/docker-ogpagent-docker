@@ -4,7 +4,7 @@
 /usr/local/bin/gomplate -f /opt/OGP/templates/Config.tmpl.yml -o /opt/OGP/Cfg/Config.yml
 /usr/local/bin/gomplate -f /opt/OGP/templates/Preferences.pm.tmpl -o /opt/OGP/Cfg/Preferences.pm
 
-echo 'storage: '${STORAGE} > /opt/OGP/Cfg/Config.yml
+echo 'storage: '${STORAGE} >> /opt/OGP/Cfg/Config.yml
 echo 'storage_nfs_address: '${STORAGE_NFS_ADDRESS} >> /opt/OGP/Cfg/Config.yml
 echo 'storage_nfs_path: '${STORAGE_NFS_PATH} >> /opt/OGP/Cfg/Config.yml
 # echo 'docker_hub_namespace: '${OGP_DOCKER_NAMESPACE} >> /opt/OGP/Cfg/Config.yml
