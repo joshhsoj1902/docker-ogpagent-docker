@@ -1,4 +1,4 @@
-FROM joshhsoj1902/docker-ogpagent
+FROM joshhsoj1902/docker-ogpagent:latest@sha256:e3a1604f953220017b0e83ec7e0bcf6a219a69aa23523de87de51e0b1bd9608e
 
 ENV OGP_LISTEN_PORT=12679
 ENV OGP_GAME_DIR=/opt/games/
