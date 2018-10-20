@@ -1956,7 +1956,8 @@ sub sudo_exec_without_decrypt
 {
 	my ($sudo_exec) = @_;
 	$sudo_exec =~ s/('+)/'"$1"'/g;
-	my $command = "echo '$SUDOPASSWD'|sudo -kS -p \"\" su -c '$sudo_exec;echo \$?' root 2>&1";
+	# my $command = "echo '$SUDOPASSWD'|sudo -kS -p \"\" su -c '$sudo_exec;echo \$?' root 2>&1";
+	my $command = "echo '$SUDOPASSWD'|sudo -kS -p \"\" su -c '$sudo_exec;echo \$?' root 2>>/opt/OGP/ogp_agent_sudo.log";
 	my @cmdret = qx($command);
 	chomp(@cmdret);
 	my $ret = pop(@cmdret);

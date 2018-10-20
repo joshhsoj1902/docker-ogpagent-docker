@@ -1,5 +1,5 @@
 docker_hub_namespace: {{getenv "OGP_DOCKER_NAMESPACE" ""}}
-docker_gcloud_namespace: {{getenv "OGP_GCLOUD_NAMESPACE" ""}}
-storage: {{getenv "STORAGE" ""}}
-storage_nfs_address: {{getenv "STORAGE_NFS_ADDRESS" ""}}
-storage_nfs_path: {{getenv "STORAGE_NFS_PATH" ""}}
+{{if getenv "OGP_GCLOUD_NAMESPACE"}}docker_gcloud_namespace: {{getenv "OGP_GCLOUD_NAMESPACE" ""}}{{end}}
+{{if getenv "STORAGE"}}storage: {{getenv "STORAGE" ""}}{{end}}
+{{if getenv "STORAGE_NFS_ADDRESS"}}storage_nfs_address: {{getenv "STORAGE_NFS_ADDRESS" ""}}{{end}}
+{{if getenv "STORAGE_NFS_PATH"}}storage_nfs_path: {{getenv "STORAGE_NFS_PATH" ""}}{{end}}
