@@ -24,7 +24,7 @@ ADD ogpmanager.sh /usr/local/bin/
 RUN mv /usr/local/bin/ogpmanager.sh /usr/local/bin/ogpmanager \
     && chmod +x /usr/local/bin/ogpmanager
 
-RUN curl -sSLf -z /usr/local/bin/gomplate -o /usr/local/bin/gomplate https://github.com/hairyhenderson/gomplate/releases/download/v2.0.0/gomplate_linux-amd64-slim \
+RUN curl -sSLf -z /usr/local/bin/gomplate -o /usr/local/bin/gomplate https://github.com/hairyhenderson/gomplate/releases/download/v3.0.0/gomplate_linux-amd64-slim \
   && chmod 755 /usr/local/bin/gomplate
 
 COPY templates /opt/OGP/templates
@@ -39,5 +39,6 @@ RUN chown -R ogp_agent:ogp_agent /opt/OGP/ \
 
 # Ideally this wouldn't be here... but for now it's easy
 COPY tests /tests
+RUN apt-get install -y vim
 
 HEALTHCHECK CMD ./docker-health.sh

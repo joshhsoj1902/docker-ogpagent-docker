@@ -6,8 +6,8 @@ game_instance_dir=$game_dir/$home_id
 
 configNamespace='{{(datasource "config").namespace}}'
 
-dockerNamespace='{{(datasource "globalConfig").docker_hub_namespace}}'
-gcloudNamespace='{{(datasource "globalConfig").docker_gcloud_namespace}}'
+dockerNamespace='{{if (datasource "globalConfig").docker_hub_namespace}}{{(datasource "globalConfig").docker_hub_namespace}}{{end}}'
+gcloudNamespace='{{if (datasource "globalConfig").docker_gcloud_namespace }}{{(datasource "globalConfig").docker_gcloud_namespace}}{{end}}'
 
 if [ ! -z "$dockerNamespace" ] && [ "$configNamespace" = "$dockerNamespace" ]; then
     echo "Using dockerhub"
